@@ -1,57 +1,57 @@
-﻿using AutoMapper;
-using MediatR;
+﻿using MediatR;
+using SharedKernel.Common.Response;
+using SharedKernel.Common.Responses;
+using SharedKernel.Interface;
 using UsersService.Application.Dto;
 using UsersService.Domain.Interface;
-using UsersService.SharedKernel.Common.Response;
-using UsersService.SharedKernel.Interface;
 
 namespace UsersService.Application.Queries
 {
-    public class GetAllUserQuery : IRequest<IApiResponse<SpRetrieveResult<List<UserRetrieveDTO>>>>
+    public class GetAllUserQuery : IRequest<IEndpointResponse<RetrieveDatabaseResult<List<UserRetrieveDTO>>>>
     {
 
-        public class TaskQueryHandler : IRequestHandler<GetAllUserQuery, IApiResponse<SpRetrieveResult<List<UserRetrieveDTO>>>>
+        public class TaskQueryHandler : IRequestHandler<GetAllUserQuery, IEndpointResponse<RetrieveDatabaseResult<List<UserRetrieveDTO>>>>
         {
             #region Properties
-            private readonly IUsersDomain _usersDomain;
-            private readonly IExceptionManagement _exceptionManagement;
+            private readonly IUserDomain _usersDomain;
+            private readonly IGlobalExceptionHandler _globalExceptionHandler;
             #endregion
 
             #region Constructor
-            public TaskQueryHandler(IUsersDomain usersDomain, IExceptionManagement exceptionManagement)
+            public TaskQueryHandler(IUserDomain usersDomain, IGlobalExceptionHandler globalExceptionHandler)
             {
                 _usersDomain = usersDomain;
-                _exceptionManagement = exceptionManagement;
+                _globalExceptionHandler = globalExceptionHandler;
             }
             #endregion
 
             #region Methods
-            public async Task<IApiResponse<SpRetrieveResult<List<UserRetrieveDTO>>>> Handle(GetAllUserQuery request, CancellationToken cancellationToken)
+            public async Task<IEndpointResponse<RetrieveDatabaseResult<List<UserRetrieveDTO>>>> Handle(GetAllUserQuery request, CancellationToken cancellationToken)
             {
-                var apiResponse = new ApiResponse<SpRetrieveResult<List<UserRetrieveDTO>>>();
+                var endpointResponse = new EndpointResponse<RetrieveDatabaseResult<List<UserRetrieveDTO>>>();
                 try
                 {
                     var users = await _usersDomain.GetAllUsersAsync();
-                    apiResponse.Data = users;
+                    endpointResponse.Data = users;
 
-                    if (apiResponse.Data.ResultStatus)
+                    if (endpointResponse.Data.ResultStatus)
                     {
-                        apiResponse.IsSuccess = true;
-                        apiResponse.Message = "Successful";
+                        endpointResponse.IsSuccess = true;
+                        endpointResponse.Message = "Successful";
                     }
                     else
                     {
-                        apiResponse.IsSuccess = false;
-                        apiResponse.Message = "Users not found";
+                        endpointResponse.IsSuccess = false;
+                        endpointResponse.Message = "Users not found";
                     }
                 }
                 catch (Exception ex)
                 {
-                    _exceptionManagement.HandleGenericException<string>(ex, "GetAllUserQuery.Handle");
-                    apiResponse.IsSuccess = false;
-                    apiResponse.Message = ex.Message;
+                    _globalExceptionHandler.HandleGenericException<string>(ex, "GetAllUserQuery.Handle");
+                    endpointResponse.IsSuccess = false;
+                    endpointResponse.Message = ex.Message;
                 }
-                return apiResponse;
+                return endpointResponse;
             }
             #endregion
         }

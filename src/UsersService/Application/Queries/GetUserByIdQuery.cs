@@ -1,15 +1,16 @@
 ﻿using AutoMapper;
 using MediatR;
+using SharedKernel.Common.Response;
+using SharedKernel.Common.Responses;
+using SharedKernel.Interface;
 using UsersService.Application.Dto;
 using UsersService.Domain.Interface;
-using UsersService.SharedKernel.Common.Response;
-using UsersService.SharedKernel.Interface;
 
 namespace UsersService.Application.Queries
 {
     public class GetUserByIdQuery
     {
-        public class TaskQuery : IRequest<IApiResponse<SpRetrieveResult<UserRetrieveDTO>>>
+        public class TaskQuery : IRequest<IEndpointResponse<RetrieveDatabaseResult<UserRetrieveDTO>>>
         {
             #region Properties
             public int Id { get; set; }
@@ -23,51 +24,51 @@ namespace UsersService.Application.Queries
             #endregion
         }
 
-        public class TaskQueryHandler : IRequestHandler<TaskQuery, IApiResponse<SpRetrieveResult<UserRetrieveDTO>>>
+        public class TaskQueryHandler : IRequestHandler<TaskQuery, IEndpointResponse<RetrieveDatabaseResult<UserRetrieveDTO>>>
         {
             #region Properties
-            private readonly IUsersDomain _userDomain;
+            private readonly IUserDomain _userDomain;
             private readonly IMapper _mapper;
-            private readonly IExceptionManagement _exceptionManagement;
+            private readonly IGlobalExceptionHandler _globalExceptionHandler;
             #endregion
 
             #region Constructor
-            public TaskQueryHandler(IUsersDomain userDomain, IMapper mapper, IExceptionManagement exceptionManagement)
+            public TaskQueryHandler(IUserDomain userDomain, IMapper mapper, IGlobalExceptionHandler globalExceptionHandler)
             {
                 _userDomain = userDomain;
                 _mapper = mapper;
-                _exceptionManagement = exceptionManagement;
+                _globalExceptionHandler = globalExceptionHandler;
             }
             #endregion
 
             #region Methods
-            public async Task<IApiResponse<SpRetrieveResult<UserRetrieveDTO>>> Handle(TaskQuery request, CancellationToken cancellationToken)
+            public async Task<IEndpointResponse<RetrieveDatabaseResult<UserRetrieveDTO>>> Handle(TaskQuery request, CancellationToken cancellationToken)
             {
-                var apiResponse = new ApiResponse<SpRetrieveResult<UserRetrieveDTO>>();
+                var endpointResponse = new EndpointResponse<RetrieveDatabaseResult<UserRetrieveDTO>>();
                 try
                 {
                     var user = await _userDomain.GetUserByIdAsync(request.Id);
-                    //apiResponse.Data = _mapper.Map<SpRetrieveResult<UserDTO>>(user);
-                    apiResponse.Data = user;
+                    //endpointResponse.Data = _mapper.Map<GlobalExceptionHandler<UserDTO>>(user);
+                    endpointResponse.Data = user;
 
-                    if (apiResponse.Data.ResultStatus)
+                    if (endpointResponse.Data.ResultStatus)
                     {
-                        apiResponse.IsSuccess = true;
-                        apiResponse.Message = "Successful";
+                        endpointResponse.IsSuccess = true;
+                        endpointResponse.Message = "Successful";
                     }
                     else
                     {
-                        apiResponse.IsSuccess = false;
-                        apiResponse.Message = "User not found";
+                        endpointResponse.IsSuccess = false;
+                        endpointResponse.Message = "User not found";
                     }
                 }
                 catch (Exception ex)
                 {
-                    _exceptionManagement.HandleGenericException<string>(ex, "GetUserByIdQuery.Handle");
-                    apiResponse.IsSuccess = false;
-                    apiResponse.Message = ex.Message;
+                    _globalExceptionHandler.HandleGenericException<string>(ex, "GetUserByIdQuery.Handle");
+                    endpointResponse.IsSuccess = false;
+                    endpointResponse.Message = ex.Message;
                 }
-                return apiResponse;
+                return endpointResponse;
             }
             #endregion
         }

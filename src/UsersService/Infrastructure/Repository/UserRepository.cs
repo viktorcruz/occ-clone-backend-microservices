@@ -1,10 +1,10 @@
 ﻿using Dapper;
+using SharedKernel.Common.Responses;
+using SharedKernel.Interface;
 using System.Data;
 using UsersService.Application.Dto;
 using UsersService.Infrastructure.Interface;
 using UsersService.Persistence.Interface;
-using UsersService.SharedKernel.Common.Response;
-using UsersService.SharedKernel.Interface;
 
 namespace UsersService.Infrastructure.Repository
 {
@@ -13,19 +13,19 @@ namespace UsersService.Infrastructure.Repository
         #region Properties
         private readonly string OCC_Connection = "OCC_Connection";
         private readonly IDbConnectionFactory _connectionFactory;
-        private readonly IExceptionManagement _exceptionManagement;
+        private readonly IGlobalExceptionHandler _globalExceptionHandler;
         #endregion
 
         #region Constructor
-        public UserRepository(IDbConnectionFactory connectionFactory, IExceptionManagement exceptionManagement)
+        public UserRepository(IDbConnectionFactory connectionFactory, IGlobalExceptionHandler globalExceptionHandler)
         {
             _connectionFactory = connectionFactory;
-            _exceptionManagement = exceptionManagement;
+            _globalExceptionHandler = globalExceptionHandler;
         }
         #endregion
 
         #region Methods
-        public async Task<SpResult?> CreateUserAsync(AddUserDTO userDTO)
+        public async Task<DatabaseResult?> CreateUserAsync(AddUserDTO userDTO)
         {
             using (var connection = _connectionFactory.GetConnection(OCC_Connection))
             {
@@ -41,7 +41,7 @@ namespace UsersService.Infrastructure.Repository
                         parameters.Add("@LastName", userDTO.LastName);
                         parameters.Add("@Email", userDTO.Email);
 
-                        var results = await connection.QuerySingleAsync<SpResult>(
+                        var results = await connection.QuerySingleAsync<DatabaseResult>(
                                 query,
                                 parameters,
                                 transaction: transaction,
@@ -57,7 +57,7 @@ namespace UsersService.Infrastructure.Repository
                     catch (Exception ex)
                     {
                         transaction.Rollback();
-                        _exceptionManagement.HandleGenericException<string>(ex, "UserRepository.CreateUserAsync");
+                        _globalExceptionHandler.HandleGenericException<string>(ex, "UserRepository.CreateUserAsync");
                     }
                     return null;
                 }
@@ -65,7 +65,7 @@ namespace UsersService.Infrastructure.Repository
         }
 
 
-        public async Task<SpRetrieveResult<UserRetrieveDTO>> GetUserByIdAsync(int userId)
+        public async Task<RetrieveDatabaseResult<UserRetrieveDTO>> GetUserByIdAsync(int userId)
         {
             using (var connection = _connectionFactory.GetConnection(OCC_Connection))
             {
@@ -86,7 +86,7 @@ namespace UsersService.Infrastructure.Repository
 
                     if (result != null)
                     {
-                        var spResult = new SpRetrieveResult<UserRetrieveDTO>
+                        var spResult = new RetrieveDatabaseResult<UserRetrieveDTO>
                         {
                             ResultStatus = result.ResultStatus,
                             ResultMessage = result.ResultMessage,
@@ -109,13 +109,13 @@ namespace UsersService.Infrastructure.Repository
                 }
                 catch (Exception ex)
                 {
-                    _exceptionManagement.HandleGenericException<string>(ex, "UserRepository.GetUserByIdAsync");
+                    _globalExceptionHandler.HandleGenericException<string>(ex, "UserRepository.GetUserByIdAsync");
                 }
-                return new SpRetrieveResult<UserRetrieveDTO>();
+                return new RetrieveDatabaseResult<UserRetrieveDTO>();
             }
         }
 
-        public async Task<SpRetrieveResult<List<UserRetrieveDTO>>> GetAllUsersAsync()
+        public async Task<RetrieveDatabaseResult<List<UserRetrieveDTO>>> GetAllUsersAsync()
         {
             using (var connection = _connectionFactory.GetConnection(OCC_Connection))
             {
@@ -130,7 +130,7 @@ namespace UsersService.Infrastructure.Repository
 
                     if (userList.Any())
                     {
-                        return new SpRetrieveResult<List<UserRetrieveDTO>>
+                        return new RetrieveDatabaseResult<List<UserRetrieveDTO>>
                         {
                             Data = userList,
                             ResultStatus = true,
@@ -143,7 +143,7 @@ namespace UsersService.Infrastructure.Repository
                     }
                     else
                     {
-                        return new SpRetrieveResult<List<UserRetrieveDTO>>
+                        return new RetrieveDatabaseResult<List<UserRetrieveDTO>>
                         {
                             Data = null,
                             ResultStatus = false,
@@ -157,8 +157,8 @@ namespace UsersService.Infrastructure.Repository
                 }
                 catch (Exception ex)
                 {
-                    _exceptionManagement.HandleGenericException<string>(ex, "UserRepository.GetAllUsersAsync");
-                    return new SpRetrieveResult<List<UserRetrieveDTO>>
+                    _globalExceptionHandler.HandleGenericException<string>(ex, "UserRepository.GetAllUsersAsync");
+                    return new RetrieveDatabaseResult<List<UserRetrieveDTO>>
                     {
                         Data = null,
                         ResultStatus = false,
@@ -172,13 +172,13 @@ namespace UsersService.Infrastructure.Repository
             }
         }
 
-        public Task<SpResult> UpdateUserAsync(UserRetrieveDTO userDTO)
+        public Task<DatabaseResult> UpdateUserAsync(UserRetrieveDTO userDTO)
         {
             using (var connection = _connectionFactory.GetConnection(OCC_Connection))
             {
                 using (var transaction = connection.BeginTransaction())
                 {
-                    connection.Open(); 
+                    connection.Open();
                     try
                     {
                         var query = "Ups_Users_Update";
@@ -189,7 +189,7 @@ namespace UsersService.Infrastructure.Repository
                         parameters.Add("@LastName", userDTO.LastName);
                         parameters.Add("@Email", userDTO.Email);
 
-                        var results = connection.QuerySingleAsync<SpResult>(query, parameters, transaction, commandType: CommandType.StoredProcedure);
+                        var results = connection.QuerySingleAsync<DatabaseResult>(query, parameters, transaction, commandType: CommandType.StoredProcedure);
 
                         transaction.Commit();
 
@@ -199,7 +199,7 @@ namespace UsersService.Infrastructure.Repository
                         }
                         else
                         {
-                            return Task.FromResult(new SpResult
+                            return Task.FromResult(new DatabaseResult
                             {
                                 ResultStatus = false,
                                 ResultMessage = "User not found",
@@ -213,8 +213,8 @@ namespace UsersService.Infrastructure.Repository
                     catch (Exception ex)
                     {
                         transaction.Rollback();
-                        _exceptionManagement.HandleGenericException<string>(ex, "UserRepository.UpdateUserAync");
-                        return Task.FromResult(new SpResult
+                        _globalExceptionHandler.HandleGenericException<string>(ex, "UserRepository.UpdateUserAync");
+                        return Task.FromResult(new DatabaseResult
                         {
                             ResultStatus = false,
                             ResultMessage = $"Error updating user: {ex.Message}",
@@ -228,7 +228,7 @@ namespace UsersService.Infrastructure.Repository
             }
         }
 
-        public async Task<SpResult?> DeleteUserAsync(int userId)
+        public async Task<DatabaseResult?> DeleteUserAsync(int userId)
         {
             using (var connection = _connectionFactory.GetConnection(OCC_Connection))
             {
@@ -241,7 +241,7 @@ namespace UsersService.Infrastructure.Repository
                         var parameters = new DynamicParameters();
                         parameters.Add("idUser", userId);
 
-                        var result = await connection.QuerySingleAsync<SpResult>(
+                        var result = await connection.QuerySingleAsync<DatabaseResult>(
                             query,
                             parameters,
                             transaction,
@@ -259,8 +259,8 @@ namespace UsersService.Infrastructure.Repository
                     catch (Exception ex)
                     {
                         transaction.Rollback();
-                        _exceptionManagement.HandleGenericException<string>(ex, "UserRepository.DeleteUserAsync");
-                        return new SpResult();
+                        _globalExceptionHandler.HandleGenericException<string>(ex, "UserRepository.DeleteUserAsync");
+                        return new DatabaseResult();
                     }
                 }
             }

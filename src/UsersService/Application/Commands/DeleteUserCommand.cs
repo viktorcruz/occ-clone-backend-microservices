@@ -1,13 +1,14 @@
 ﻿using MediatR;
+using SharedKernel.Common.Response;
+using SharedKernel.Common.Responses;
+using SharedKernel.Interface;
 using UsersService.Domain.Interface;
-using UsersService.SharedKernel.Common.Response;
-using UsersService.SharedKernel.Interface;
 
 namespace UsersService.Application.Commands
 {
     public class DeleteUserCommand
     {
-        public class TaskCommand : IRequest<IApiResponse<SpResult>>
+        public class TaskCommand : IRequest<IEndpointResponse<DatabaseResult>>
         {
             #region Properties
             public int idUser { get; set; }
@@ -21,49 +22,49 @@ namespace UsersService.Application.Commands
             #endregion
         }
 
-        public class DeleteUserCommandHandler : IRequestHandler<TaskCommand, IApiResponse<SpResult>>
+        public class DeleteUserCommandHandler : IRequestHandler<TaskCommand, IEndpointResponse<DatabaseResult>>
         {
             #region Properties
-            private readonly IUsersDomain _usersDomain;
-            private readonly IExceptionManagement _exceptionManagement;
+            private readonly IUserDomain _usersDomain;
+            private readonly IGlobalExceptionHandler _globalExceptionHandler;
             #endregion
 
             #region Constructor
-            public DeleteUserCommandHandler(IUsersDomain usersDomain, IExceptionManagement exceptionManagement)
+            public DeleteUserCommandHandler(IUserDomain usersDomain, IGlobalExceptionHandler globalExceptionHandler)
             {
                 _usersDomain = usersDomain;
-                _exceptionManagement = exceptionManagement;
+                _globalExceptionHandler = globalExceptionHandler;
             }
             #endregion
 
             #region Methods
-            public async Task<IApiResponse<SpResult>> Handle(TaskCommand request, CancellationToken cancellationToken)
+            public async Task<IEndpointResponse<DatabaseResult>> Handle(TaskCommand request, CancellationToken cancellationToken)
             {
-                var apiResponse = new ApiResponse<SpResult>();
+                var endpointResponse = new EndpointResponse<DatabaseResult>();
 
                 try
                 {
                     var response = await _usersDomain.DeleteUserAsync(request.idUser);
-                    apiResponse.Data = response;
+                    endpointResponse.Data = response;
 
                     if (response != null && response.ResultStatus)
                     {
-                        apiResponse.IsSuccess = true;
-                        apiResponse.Message = "User deleted successful";
+                        endpointResponse.IsSuccess = true;
+                        endpointResponse.Message = "User deleted successful";
                     }
                     else
                     {
-                        apiResponse.IsSuccess = false;
-                        apiResponse.Message = response?.ResultMessage ?? "User not found";
+                        endpointResponse.IsSuccess = false;
+                        endpointResponse.Message = response?.ResultMessage ?? "User not found";
                     }
                 }
                 catch (Exception ex)
                 {
-                    _exceptionManagement.HandleGenericException<string>(ex, "DeleteUserCommand.Handle");
-                    apiResponse.IsSuccess = false;
-                    apiResponse.Message = $"Error deleting user: {ex.Message}";
+                    _globalExceptionHandler.HandleGenericException<string>(ex, "DeleteUserCommand.Handle");
+                    endpointResponse.IsSuccess = false;
+                    endpointResponse.Message = $"Error deleting user: {ex.Message}";
                 }
-                return apiResponse;
+                return endpointResponse;
             }
             #endregion
         }

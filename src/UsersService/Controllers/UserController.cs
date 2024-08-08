@@ -1,9 +1,9 @@
 ﻿using MediatR;
 using Microsoft.AspNetCore.Mvc;
+using SharedKernel.Interface;
 using UsersService.Application.Commands;
 using UsersService.Application.Dto;
 using UsersService.Application.Queries;
-using UsersService.SharedKernel.Interface;
 
 namespace UsersService.Controllers
 {
@@ -13,14 +13,14 @@ namespace UsersService.Controllers
     {
         #region Porperties
         private readonly IMediator _mediator;
-        private readonly IExceptionManagement _exceptionManagement;
+        private readonly IGlobalExceptionHandler _globalExceptionHandler;
         #endregion
 
         #region Constructor
-        public UserController(IMediator mediator, IExceptionManagement exceptionManagement)
+        public UserController(IMediator mediator, IGlobalExceptionHandler globalExceptionHandler)
         {
             _mediator = mediator;
-            _exceptionManagement = exceptionManagement;
+            _globalExceptionHandler = globalExceptionHandler;
         }
         #endregion
 
@@ -31,17 +31,17 @@ namespace UsersService.Controllers
             try
             {
                 var command = new CreateUserCommand.TaskCommand(userDTO);
-                var apiResponse = await _mediator.Send(command);
-                if (apiResponse != null)
+                var endpointResponse = await _mediator.Send(command);
+                if (endpointResponse != null)
                 {
-                    return Ok(apiResponse);
+                    return Ok(endpointResponse);
                 }
-                return BadRequest(apiResponse);
+                return BadRequest(endpointResponse);
 
             }
             catch (Exception ex)
             {
-                _exceptionManagement.HandleGenericException<string>(ex, "UserController.CreateUser");
+                _globalExceptionHandler.HandleGenericException<string>(ex, "UserController.CreateUser");
                 return StatusCode(500);
             }
         }
@@ -52,16 +52,16 @@ namespace UsersService.Controllers
             try
             {
                 var query = new GetUserByIdQuery.TaskQuery(userId);
-                var apiResponse = await _mediator.Send(query);
-                if (apiResponse.IsSuccess)
+                var endpointResponse = await _mediator.Send(query);
+                if (endpointResponse.IsSuccess)
                 {
-                    return Ok(apiResponse);
+                    return Ok(endpointResponse);
                 }
-                return BadRequest(apiResponse);
+                return BadRequest(endpointResponse);
             }
             catch (Exception ex)
             {
-                _exceptionManagement.HandleGenericException<string>(ex, "UserController.GetUserById");
+                _globalExceptionHandler.HandleGenericException<string>(ex, "UserController.GetUserById");
                 return StatusCode(500);
             }
         }
@@ -72,16 +72,16 @@ namespace UsersService.Controllers
             try
             {
                 var query = new GetAllUserQuery();
-                var apiResponse = await _mediator.Send(query);
-                if (apiResponse.IsSuccess)
+                var endpointResponse = await _mediator.Send(query);
+                if (endpointResponse.IsSuccess)
                 {
-                    return Ok(apiResponse);
+                    return Ok(endpointResponse);
                 }
-                return BadRequest(apiResponse);
+                return BadRequest(endpointResponse);
             }
             catch (Exception ex)
             {
-                _exceptionManagement.HandleGenericException<string>(ex, "UserController.GetAllUsers");
+                _globalExceptionHandler.HandleGenericException<string>(ex, "UserController.GetAllUsers");
                 return StatusCode(500);
             }
         }
@@ -92,16 +92,16 @@ namespace UsersService.Controllers
             try
             {
                 var command = new UpdateUserCommand.TaskCommand(userDTO);
-                var apiResponse = await _mediator.Send(command);
-                if (apiResponse.IsSuccess)
+                var endpointResponse = await _mediator.Send(command);
+                if (endpointResponse.IsSuccess)
                 {
-                    return Ok(apiResponse);
+                    return Ok(endpointResponse);
                 }
-                return BadRequest(apiResponse);
+                return BadRequest(endpointResponse);
             }
             catch (Exception ex)
             {
-                _exceptionManagement.HandleGenericException<string>(ex, "UserController.UpdateUser");
+                _globalExceptionHandler.HandleGenericException<string>(ex, "UserController.UpdateUser");
                 return StatusCode(500);
             }
         }
@@ -112,16 +112,16 @@ namespace UsersService.Controllers
             try
             {
                 var command = new DeleteUserCommand.TaskCommand(userId);
-                var apiResponse = await _mediator.Send(command);
-                if (apiResponse != null)
+                var endpointResponse = await _mediator.Send(command);
+                if (endpointResponse != null)
                 {
-                    return Ok(apiResponse);
+                    return Ok(endpointResponse);
                 }
-                return BadRequest(apiResponse);
+                return BadRequest(endpointResponse);
             }
             catch (Exception ex)
             {
-                _exceptionManagement.HandleGenericException<string>(ex, "UserController.DeleteUserById");
+                _globalExceptionHandler.HandleGenericException<string>(ex, "UserController.DeleteUserById");
                 return StatusCode(500);
             }
         }

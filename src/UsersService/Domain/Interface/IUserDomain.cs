@@ -1,9 +1,9 @@
 ﻿using SharedKernel.Common.Responses;
 using UsersService.Application.Dto;
 
-namespace UsersService.Infrastructure.Interface
+namespace UsersService.Domain.Interface
 {
-    public interface IUserRepository
+    public interface IUserDomain
     {
         Task<DatabaseResult> CreateUserAsync(AddUserDTO userDTO);
         Task<RetrieveDatabaseResult<UserRetrieveDTO>> GetUserByIdAsync(int userId);

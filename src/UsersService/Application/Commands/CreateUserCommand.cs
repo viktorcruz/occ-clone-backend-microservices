@@ -1,14 +1,15 @@
 ﻿using MediatR;
+using SharedKernel.Common.Response;
+using SharedKernel.Common.Responses;
+using SharedKernel.Interface;
 using UsersService.Application.Dto;
 using UsersService.Domain.Interface;
-using UsersService.SharedKernel.Common.Response;
-using UsersService.SharedKernel.Interface;
 
 namespace UsersService.Application.Commands
 {
     public class CreateUserCommand
     {
-        public class TaskCommand : IRequest<IApiResponse<SpResult>>
+        public class TaskCommand : IRequest<IEndpointResponse<DatabaseResult>>
         {
             #region Properties
             public int IdRole { get; set; }
@@ -28,25 +29,25 @@ namespace UsersService.Application.Commands
             #endregion
         }
 
-        public class CreateUserCommandHandler : IRequestHandler<TaskCommand, IApiResponse<SpResult>>
+        public class CreateUserCommandHandler : IRequestHandler<TaskCommand, IEndpointResponse<DatabaseResult>>
         {
             #region Properties
-            private readonly IUsersDomain _userDomain;
-            private readonly IExceptionManagement _exceptionManagement;
+            private readonly IUserDomain _userDomain;
+            private readonly IGlobalExceptionHandler _globalExceptionHandler;
             #endregion
 
             #region Constructor
-            public CreateUserCommandHandler(IUsersDomain usersDomain, IExceptionManagement exceptionManagement)
+            public CreateUserCommandHandler(IUserDomain usersDomain, IGlobalExceptionHandler globalExceptionHandler)
             {
                 _userDomain = usersDomain;
-                _exceptionManagement = exceptionManagement;
+                _globalExceptionHandler = globalExceptionHandler;
             }
             #endregion
 
             #region Methods
-            public async Task<IApiResponse<SpResult>> Handle(TaskCommand request, CancellationToken cancellationToken)
+            public async Task<IEndpointResponse<DatabaseResult>> Handle(TaskCommand request, CancellationToken cancellationToken)
             {
-                var apiResponse = new ApiResponse<SpResult>();
+                var endpointResponse = new EndpointResponse<DatabaseResult>();
 
                 try
                 {
@@ -55,30 +56,30 @@ namespace UsersService.Application.Commands
                         IdRole = request.IdRole,
                         FirstName = request.FirstName,
                         LastName = request.LastName,
-                        Email = request.Email,  
+                        Email = request.Email,
                     };
 
                     var response = await _userDomain.CreateUserAsync(user);
-                    apiResponse.Data = response;
+                    endpointResponse.Data = response;
 
                     if (response != null && response.ResultStatus)
                     {
-                        apiResponse.IsSuccess = true;
-                        apiResponse.Message = "User created successful";
+                        endpointResponse.IsSuccess = true;
+                        endpointResponse.Message = "User created successful";
                     }
                     else
                     {
-                        apiResponse.IsSuccess = false;
-                        apiResponse.Message = response?.ResultMessage ?? "User not found";
+                        endpointResponse.IsSuccess = false;
+                        endpointResponse.Message = response?.ResultMessage ?? "User not found";
                     }
                 }
                 catch (Exception ex)
                 {
-                    _exceptionManagement.HandleGenericException<string>(ex, "CreateUserCommand.Handle");
-                    apiResponse.IsSuccess = false;
-                    apiResponse.Message = $"Error creating user: {ex.Message}";
+                    _globalExceptionHandler.HandleGenericException<string>(ex, "CreateUserCommand.Handle");
+                    endpointResponse.IsSuccess = false;
+                    endpointResponse.Message = $"Error creating user: {ex.Message}";
                 }
-                return apiResponse;
+                return endpointResponse;
             }
             #endregion
         }
