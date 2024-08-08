@@ -1,0 +1,51 @@
+{
+  "Aggregates": [
+    {
+      "UpstreamPathTemplate": "/api/usersRoles",
+      "RouteKeys": [ "users", "roles" ],
+      "Aggregator": "UserRolesAggregator"
+    }
+  ],
+  "Routes": [
+    {
+      "DownstreamPathTemplate": "/api/publications/{everything}",
+      "Key": "publications",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "localhost",
+          "Port": 5001
+        }
+      ],
+      "UpstreamPathTemplate": "api/publications/{everything}",
+      "UpstreamHttpMethod": [ "Get", "Post", "Put", "Delete" ]
+    },
+    {
+      "DownstreamPathTemplate": "/api/roles/{everything",
+      "Key": "roles",
+      "DownstreamScheme": "https",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "localhost",
+          "Port": 5002
+        }
+      ],
+      "UpstreamPathTemplate": "api/roles/{everything}",
+      "UpstreamHttpMethod": [ "Get", "Post", "Put", "Delete" ]
+    },
+    {
+      "DownstreamPathTemplate": "/users/{everything}",
+      "Key": "users",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "localhost",
+          "Port": 5003
+        }
+      ],
+      "UpstreamPathTemplate": "api/users/{everything}",
+      "UpstreamHttpMethod": [ "Get", "Post", "Put", "Delete" ]
+    }
+  ],
+  "GlobalConfiguration": { "BaseUrl": "https://localhost:44361" }
+}

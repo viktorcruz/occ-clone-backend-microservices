@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk.Web">
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
@@ -11,7 +11,27 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Folder Include="Aplication\Commands\" />
+    <Folder Include="Aplication\Dto\" />
+    <Folder Include="Aplication\Queries\" />
     <Folder Include="Controllers\" />
+    <Folder Include="Domain\Core\" />
+    <Folder Include="Domain\Entity\" />
+    <Folder Include="Domain\Interface\" />
+    <Folder Include="Infrastructure\Interface\" />
+    <Folder Include="Infrastructure\Repository\" />
+    <Folder Include="Modules\Authentication\" />
+    <Folder Include="Modules\Feature\" />
+    <Folder Include="Modules\Injection\" />
+    <Folder Include="Modules\Mapper\" />
+    <Folder Include="Modules\Swagger\" />
+    <Folder Include="Persistence\Data\" />
+    <Folder Include="Persistence\Interface\" />
+    <Folder Include="SharedKernel\Common\" />
+    <Folder Include="SharedKernel\Helpers\" />
+    <Folder Include="SharedKernel\Interface\" />
+    <Folder Include="SharedKernel\Mapper\" />
+    <Folder Include="Transversal\" />
   </ItemGroup>
 
 </Project>
