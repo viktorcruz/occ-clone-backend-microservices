@@ -1,0 +1,100 @@
+
+--CREATE DATABASE OCC_CLONE
+
+
+USE [OCC_CLONE]
+GO
+
+--;
+IF EXISTS(SELECT 1 FROM SYS.OBJECTS WHERE OBJECT_ID = OBJECT_ID(N'[dbo].[SelectionProcess]'))
+BEGIN
+	ALTER TABLE [dbo].[SelectionProcess] DROP CONSTRAINT IF EXISTS [FK_SelectionProcess_Publications]
+	ALTER TABLE [dbo].[SelectionProcess] DROP CONSTRAINT IF EXISTS [FK_SelectionProcess_Users]
+END
+IF EXISTS(SELECT 1 FROM SYS.OBJECTS WHERE OBJECT_ID = OBJECT_ID(N'[dbo].[Publications]'))
+BEGIN
+	ALTER TABLE [dbo].[Publications] DROP CONSTRAINT IF EXISTS [FK_Publications_Users]
+	ALTER TABLE [dbo].[Publications] DROP CONSTRAINT IF EXISTS [FK_Publications_Roles]
+END
+IF EXISTS(SELECT 1 FROM SYS.OBJECTS WHERE OBJECT_ID = OBJECT_ID(N'[dbo].[Users]'))
+BEGIN
+	ALTER TABLE [dbo].[Users] DROP CONSTRAINT IF EXISTS [FK_Users_Roles]
+END
+GO
+
+--;
+IF EXISTS(SELECT 1 FROM SYS.OBJECTS WHERE OBJECT_ID = OBJECT_ID(N'[dbo].[SelectionProcess]'))
+BEGIN
+	DROP TABLE [dbo].[SelectionProcess]
+END
+IF EXISTS(SELECT 1 FROM SYS.OBJECTS WHERE OBJECT_ID = OBJECT_ID(N'[dbo].[Publications]'))
+BEGIN 
+	DROP TABLE [dbo].[Publications]
+END
+IF EXISTS(SELECT 1 FROM SYS.OBJECTS WHERE OBJECT_ID = OBJECT_ID(N'[dbo].[Roles]'))
+BEGIN
+	DROP TABLE [dbo].[Roles]
+END
+IF EXISTS(SELECT 1 FROM SYS.OBJECTS WHERE OBJECT_ID = OBJECT_ID(N'[dbo].[Users]'))
+BEGIN
+	DROP TABLE [dbo].[Users]
+END
+
+GO
+
+CREATE TABLE Roles
+(
+	idRole INT IDENTITY(1,1) PRIMARY KEY CLUSTERED,
+	RoleName NVARCHAR(20) NOT NULL
+)
+
+CREATE TABLE Users
+(
+	idUser INT IDENTITY(1,1) PRIMARY KEY CLUSTERED,
+	idRole INT NOT NULL,
+	FirstName NVARCHAR(20) NOT NULL,
+	LastName NVARCHAR(20) NOT NULL,
+	Email NVARCHAR(50) UNIQUE NOT NULL,
+	CreationDate DATETIME NOT NULL
+)
+
+ALTER TABLE Users
+	WITH CHECK ADD CONSTRAINT [FK_Users_Roles]
+	FOREIGN KEY([idRole]) REFERENCES Roles([idRole])
+
+
+CREATE TABLE Publications
+(
+	idPublication INT IDENTITY(1,1) PRIMARY KEY CLUSTERED,
+	idRecruiter INT NOT NULL,
+	Title NVARCHAR(20) NOT NULL,
+	Description NVARCHAR(100),
+	PublicationDate DATETIME NOT NULL,
+	idRole INT NOT NULL,
+	Status BIT NOT NULL,
+	ExpirationDate DATETIME NOT NULL
+)
+
+ALTER TABLE Publications
+	WITH CHECK ADD CONSTRAINT [FK_Publications_Users]
+	FOREIGN KEY([idRecruiter]) REFERENCES Users([idUser])
+ALTER TABLE Publications
+	WITH CHECK ADD CONSTRAINT [FK_Publications_Roles]
+	FOREIGN KEY([idRole]) REFERENCES Roles([idRole])
+
+CREATE TABLE SelectionProcess
+(
+	idSelectionProcess INT IDENTITY(1,1) PRIMARY KEY CLUSTERED,
+	idPublication INT NOT NULL,
+	idApplicant INT NOT NULL,
+	Status NVARCHAR(20) NOT NULL,
+	ApplicationDate DATETIME NOT NULL
+)
+
+ALTER TABLE SelectionProcess
+	WITH CHECK ADD CONSTRAINT [FK_SelectionProcess_Publications]
+	FOREIGN KEY([idPublication]) REFERENCES Publications([idPublication])
+ALTER TABLE SelectionProcess
+	WITH CHECK ADD CONSTRAINT [FK_SelectionProcess_Users]
+	FOREIGN KEY([idApplicant]) REFERENCES Users([idUser])
+	   
