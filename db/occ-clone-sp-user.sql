@@ -1,6 +1,6 @@
 
 
-USE [OCC_CLONE]
+USE [OCC_Clone]
 GO
 
 IF OBJECT_ID('[dbo].[Usp_Users_Add]', 'P') IS NOT NULL
