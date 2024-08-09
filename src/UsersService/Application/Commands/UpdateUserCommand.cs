@@ -9,7 +9,7 @@ namespace UsersService.Application.Commands
 {
     public class UpdateUserCommand
     {
-        public class TaskCommand : IRequest<IEndpointResponse<DatabaseResult>>
+        public class TaskCommand : IRequest<IEndpointResponse<IDatabaseResult>>
         {
             #region Properties
             public int IdUser { get; set; }
@@ -31,26 +31,27 @@ namespace UsersService.Application.Commands
             #endregion
         }
 
-        public class UpdateUserCommandHandler : IRequestHandler<TaskCommand, IEndpointResponse<DatabaseResult>>
+        public class UpdateUserCommandHandler : IRequestHandler<TaskCommand, IEndpointResponse<IDatabaseResult>>
         {
             #region Properties
             private readonly IUserDomain _usersDomain;
             private readonly IGlobalExceptionHandler _globalExceptionHandler;
+            private readonly IEndpointResponse<IDatabaseResult> _endpointResponse;
             #endregion
 
             #region Constructor
-            public UpdateUserCommandHandler(IUserDomain usersDomain, IGlobalExceptionHandler globalExceptionHandler)
+            public UpdateUserCommandHandler(IUserDomain usersDomain, IGlobalExceptionHandler globalExceptionHandler, IEndpointResponse<IDatabaseResult> endpointResponse)
             {
                 _usersDomain = usersDomain;
                 _globalExceptionHandler = globalExceptionHandler;
+                _endpointResponse = endpointResponse;
+
             }
             #endregion
 
             #region Methods
-            public async Task<IEndpointResponse<DatabaseResult>> Handle(TaskCommand request, CancellationToken cancellationToken)
+            public async Task<IEndpointResponse<IDatabaseResult>> Handle(TaskCommand request, CancellationToken cancellationToken)
             {
-                var endpointResponse = new EndpointResponse<DatabaseResult>();
-
                 try
                 {
                     var user = new UserRetrieveDTO
@@ -63,26 +64,26 @@ namespace UsersService.Application.Commands
                     };
 
                     var response = await _usersDomain.UpdateUserAsync(user);
-                    endpointResponse.Data = response;
+                    _endpointResponse.Result = response;
 
                     if (response != null && response.ResultStatus)
                     {
-                        endpointResponse.IsSuccess = true;
-                        endpointResponse.Message = "User updated sucessful";
+                        _endpointResponse.IsSuccess = true;
+                        _endpointResponse.Message = "User updated sucessful";
                     }
                     else
                     {
-                        endpointResponse.IsSuccess = false;
-                        endpointResponse.Message = response?.ResultMessage ?? "User not found";
+                        _endpointResponse.IsSuccess = false;
+                        _endpointResponse.Message = response?.ResultMessage ?? "User not found";
                     }
                 }
                 catch (Exception ex)
                 {
                     _globalExceptionHandler.HandleGenericException<string>(ex, "UpdateUserCommand.Handle");
-                    endpointResponse.IsSuccess = false;
-                    endpointResponse.Message = $"Error updateing user: {ex.Message}";
+                    _endpointResponse.IsSuccess = false;
+                    _endpointResponse.Message = $"Error updateing user: {ex.Message}";
                 }
-                return endpointResponse;
+                return _endpointResponse;
             }
             #endregion
         }

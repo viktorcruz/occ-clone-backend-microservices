@@ -94,7 +94,7 @@ namespace UsersService.Infrastructure.Repository
                             AffectedRecordId = result.AffectedRecordId,
                             OperationDateTime = result.OperationDateTime,
                             ExceptionMessage = result.ExceptionMessage,
-                            Data = new UserRetrieveDTO
+                            Details = new UserRetrieveDTO
                             {
                                 IdUser = result.IdUser,
                                 IdRole = result.IdRole,
@@ -132,7 +132,7 @@ namespace UsersService.Infrastructure.Repository
                     {
                         return new RetrieveDatabaseResult<List<UserRetrieveDTO>>
                         {
-                            Data = userList,
+                            Details = userList,
                             ResultStatus = true,
                             ResultMessage = "Users retrieved seccessfully",
                             OperationType = "GET ALL",
@@ -145,7 +145,7 @@ namespace UsersService.Infrastructure.Repository
                     {
                         return new RetrieveDatabaseResult<List<UserRetrieveDTO>>
                         {
-                            Data = null,
+                            Details = null,
                             ResultStatus = false,
                             ResultMessage = "No users found",
                             OperationType = "GET ALL",
@@ -160,7 +160,7 @@ namespace UsersService.Infrastructure.Repository
                     _globalExceptionHandler.HandleGenericException<string>(ex, "UserRepository.GetAllUsersAsync");
                     return new RetrieveDatabaseResult<List<UserRetrieveDTO>>
                     {
-                        Data = null,
+                        Details = null,
                         ResultStatus = false,
                         ResultMessage = $"Error retrieving users: {ex.Message}",
                         OperationType = "GET ALL",

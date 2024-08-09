@@ -1,4 +1,6 @@
 ﻿using AutoMapper;
+using RolesServices.Aplication.Dto;
+using RolesServices.Domain.Entity;
 
 namespace RolesServices.SharedKernel.Mapper
 {
@@ -6,7 +8,7 @@ namespace RolesServices.SharedKernel.Mapper
     {
         public MappingProfile()
         {
-            //CreateMap<UserEntity, UserRetrieveDTO>().ReverseMap();
+            CreateMap<RoleEntity, RoleDTO>().ReverseMap();
         }
     }
 }

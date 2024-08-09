@@ -8,7 +8,7 @@ namespace UsersService.Application.Commands
 {
     public class DeleteUserCommand
     {
-        public class TaskCommand : IRequest<IEndpointResponse<DatabaseResult>>
+        public class TaskCommand : IRequest<IEndpointResponse<IDatabaseResult>>
         {
             #region Properties
             public int idUser { get; set; }
@@ -22,49 +22,50 @@ namespace UsersService.Application.Commands
             #endregion
         }
 
-        public class DeleteUserCommandHandler : IRequestHandler<TaskCommand, IEndpointResponse<DatabaseResult>>
+        public class DeleteUserCommandHandler : IRequestHandler<TaskCommand, IEndpointResponse<IDatabaseResult>>
         {
             #region Properties
             private readonly IUserDomain _usersDomain;
             private readonly IGlobalExceptionHandler _globalExceptionHandler;
+            private readonly IEndpointResponse<IDatabaseResult> _endpointResponse;
             #endregion
 
             #region Constructor
-            public DeleteUserCommandHandler(IUserDomain usersDomain, IGlobalExceptionHandler globalExceptionHandler)
+            public DeleteUserCommandHandler(IUserDomain usersDomain, IGlobalExceptionHandler globalExceptionHandler, IEndpointResponse<IDatabaseResult> endpointResponse)
             {
                 _usersDomain = usersDomain;
                 _globalExceptionHandler = globalExceptionHandler;
+                _endpointResponse = endpointResponse;
+
             }
             #endregion
 
             #region Methods
-            public async Task<IEndpointResponse<DatabaseResult>> Handle(TaskCommand request, CancellationToken cancellationToken)
+            public async Task<IEndpointResponse<IDatabaseResult>> Handle(TaskCommand request, CancellationToken cancellationToken)
             {
-                var endpointResponse = new EndpointResponse<DatabaseResult>();
-
                 try
                 {
                     var response = await _usersDomain.DeleteUserAsync(request.idUser);
-                    endpointResponse.Data = response;
+                    _endpointResponse.Result = response;
 
                     if (response != null && response.ResultStatus)
                     {
-                        endpointResponse.IsSuccess = true;
-                        endpointResponse.Message = "User deleted successful";
+                        _endpointResponse.IsSuccess = true;
+                        _endpointResponse.Message = "User deleted successful";
                     }
                     else
                     {
-                        endpointResponse.IsSuccess = false;
-                        endpointResponse.Message = response?.ResultMessage ?? "User not found";
+                        _endpointResponse.IsSuccess = false;
+                        _endpointResponse.Message = response?.ResultMessage ?? "User not found";
                     }
                 }
                 catch (Exception ex)
                 {
                     _globalExceptionHandler.HandleGenericException<string>(ex, "DeleteUserCommand.Handle");
-                    endpointResponse.IsSuccess = false;
-                    endpointResponse.Message = $"Error deleting user: {ex.Message}";
+                    _endpointResponse.IsSuccess = false;
+                    _endpointResponse.Message = $"Error deleting user: {ex.Message}";
                 }
-                return endpointResponse;
+                return _endpointResponse;
             }
             #endregion
         }

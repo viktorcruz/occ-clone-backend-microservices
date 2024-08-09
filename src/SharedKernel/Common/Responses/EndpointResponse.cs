@@ -5,7 +5,7 @@ namespace SharedKernel.Common.Response
     public class EndpointResponse<T> : IEndpointResponse<T>
     {
         #region Properties
-        public T Data { get; set; }
+        public T Result { get; set; }
         public bool IsSuccess { get; set; }
         public string Message { get; set; }
         #endregion
@@ -14,7 +14,7 @@ namespace SharedKernel.Common.Response
         public EndpointResponse() { }
         public EndpointResponse(T data, bool isSuccess, string message)
         {
-            Data = data;
+            Result = data;
             IsSuccess = isSuccess;
             Message = message;
         }

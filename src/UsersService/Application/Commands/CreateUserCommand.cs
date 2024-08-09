@@ -9,7 +9,7 @@ namespace UsersService.Application.Commands
 {
     public class CreateUserCommand
     {
-        public class TaskCommand : IRequest<IEndpointResponse<DatabaseResult>>
+        public class TaskCommand : IRequest<IEndpointResponse<IDatabaseResult>>
         {
             #region Properties
             public int IdRole { get; set; }
@@ -29,26 +29,27 @@ namespace UsersService.Application.Commands
             #endregion
         }
 
-        public class CreateUserCommandHandler : IRequestHandler<TaskCommand, IEndpointResponse<DatabaseResult>>
+        public class CreateUserCommandHandler : IRequestHandler<TaskCommand, IEndpointResponse<IDatabaseResult>>
         {
             #region Properties
             private readonly IUserDomain _userDomain;
             private readonly IGlobalExceptionHandler _globalExceptionHandler;
+            private readonly IEndpointResponse<IDatabaseResult> _endpointResponse;
             #endregion
 
             #region Constructor
-            public CreateUserCommandHandler(IUserDomain usersDomain, IGlobalExceptionHandler globalExceptionHandler)
+            public CreateUserCommandHandler(IUserDomain usersDomain, IGlobalExceptionHandler globalExceptionHandler, IEndpointResponse<IDatabaseResult> endpointResponse)
             {
                 _userDomain = usersDomain;
                 _globalExceptionHandler = globalExceptionHandler;
+                _endpointResponse = endpointResponse;
+
             }
             #endregion
 
             #region Methods
-            public async Task<IEndpointResponse<DatabaseResult>> Handle(TaskCommand request, CancellationToken cancellationToken)
+            public async Task<IEndpointResponse<IDatabaseResult>> Handle(TaskCommand request, CancellationToken cancellationToken)
             {
-                var endpointResponse = new EndpointResponse<DatabaseResult>();
-
                 try
                 {
                     var user = new AddUserDTO
@@ -60,26 +61,26 @@ namespace UsersService.Application.Commands
                     };
 
                     var response = await _userDomain.CreateUserAsync(user);
-                    endpointResponse.Data = response;
+                    _endpointResponse.Result = response;
 
                     if (response != null && response.ResultStatus)
                     {
-                        endpointResponse.IsSuccess = true;
-                        endpointResponse.Message = "User created successful";
+                        _endpointResponse.IsSuccess = true;
+                        _endpointResponse.Message = "User created successful";
                     }
                     else
                     {
-                        endpointResponse.IsSuccess = false;
-                        endpointResponse.Message = response?.ResultMessage ?? "User not found";
+                        _endpointResponse.IsSuccess = false;
+                        _endpointResponse.Message = response?.ResultMessage ?? "User not created";
                     }
                 }
                 catch (Exception ex)
                 {
                     _globalExceptionHandler.HandleGenericException<string>(ex, "CreateUserCommand.Handle");
-                    endpointResponse.IsSuccess = false;
-                    endpointResponse.Message = $"Error creating user: {ex.Message}";
+                    _endpointResponse.IsSuccess = false;
+                    _endpointResponse.Message = $"Error creating user: {ex.Message}";
                 }
-                return endpointResponse;
+                return (IEndpointResponse<IDatabaseResult>)_endpointResponse;
             }
             #endregion
         }

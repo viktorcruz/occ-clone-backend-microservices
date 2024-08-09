@@ -28,47 +28,45 @@ namespace UsersService.Application.Queries
         {
             #region Properties
             private readonly IUserDomain _userDomain;
-            private readonly IMapper _mapper;
             private readonly IGlobalExceptionHandler _globalExceptionHandler;
+            private readonly IEndpointResponse<RetrieveDatabaseResult<UserRetrieveDTO>> _endpointResponse;
             #endregion
 
             #region Constructor
-            public TaskQueryHandler(IUserDomain userDomain, IMapper mapper, IGlobalExceptionHandler globalExceptionHandler)
+            public TaskQueryHandler(IUserDomain userDomain, IMapper mapper, IGlobalExceptionHandler globalExceptionHandler, IEndpointResponse<RetrieveDatabaseResult<UserRetrieveDTO>> endpointResponse)
             {
                 _userDomain = userDomain;
-                _mapper = mapper;
                 _globalExceptionHandler = globalExceptionHandler;
+                _endpointResponse = endpointResponse;
             }
             #endregion
 
             #region Methods
             public async Task<IEndpointResponse<RetrieveDatabaseResult<UserRetrieveDTO>>> Handle(TaskQuery request, CancellationToken cancellationToken)
             {
-                var endpointResponse = new EndpointResponse<RetrieveDatabaseResult<UserRetrieveDTO>>();
                 try
                 {
-                    var user = await _userDomain.GetUserByIdAsync(request.Id);
-                    //endpointResponse.Data = _mapper.Map<GlobalExceptionHandler<UserDTO>>(user);
-                    endpointResponse.Data = user;
+                    var response = await _userDomain.GetUserByIdAsync(request.Id);
+                    _endpointResponse.Result = response;
 
-                    if (endpointResponse.Data.ResultStatus)
+                    if (response != null && response.ResultStatus)
                     {
-                        endpointResponse.IsSuccess = true;
-                        endpointResponse.Message = "Successful";
+                        _endpointResponse.IsSuccess = true;
+                        _endpointResponse.Message = "Successful";
                     }
                     else
                     {
-                        endpointResponse.IsSuccess = false;
-                        endpointResponse.Message = "User not found";
+                        _endpointResponse.IsSuccess = false;
+                        _endpointResponse.Message = "User not found";
                     }
                 }
                 catch (Exception ex)
                 {
                     _globalExceptionHandler.HandleGenericException<string>(ex, "GetUserByIdQuery.Handle");
-                    endpointResponse.IsSuccess = false;
-                    endpointResponse.Message = ex.Message;
+                    _endpointResponse.IsSuccess = false;
+                    _endpointResponse.Message = ex.Message;
                 }
-                return endpointResponse;
+                return _endpointResponse;
             }
             #endregion
         }

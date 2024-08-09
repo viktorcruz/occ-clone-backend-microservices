@@ -14,6 +14,6 @@ namespace SharedKernel.Common.Responses
 
     public class RetrieveDatabaseResult<T> : DatabaseResult
     {
-        public T Data { get; set; }
+        public T Details { get; set; }
     }
 }
