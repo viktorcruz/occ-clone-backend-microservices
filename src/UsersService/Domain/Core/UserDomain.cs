@@ -32,15 +32,27 @@ namespace UsersService.Domain.Core
             return await _userRepository.GetAllUsersAsync();
         }
 
+        public async Task<RetrieveDatabaseResult<List<UserRetrieveDTO>>> SearchUserAsync()
+        {
+            return await _userRepository.SearchUserAsync();
+        }
+
         public async Task<DatabaseResult> UpdateUserAsync(UserRetrieveDTO userDTO)
         {
             return await _userRepository.UpdateUserAsync(userDTO);
+        }
+
+        public async Task<DatabaseResult> UpdateUserProfileAsync(UserProfileDTO userDTO)
+        {
+            return await _userRepository.UpdateUserProfileAsync(userDTO);
         }
 
         public async Task<DatabaseResult> DeleteUserAsync(int userId)
         {
             return await _userRepository.DeleteUserAsync(userId);
         }
+
+
         #endregion
     }
 }

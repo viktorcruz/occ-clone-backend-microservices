@@ -192,7 +192,10 @@ CREATE OR ALTER PROCEDURE
 		@IdRole INT,
 		@FirstName NVARCHAR(20),
 		@LastName NVARCHAR(20),
-		@Email NVARCHAR(50)
+		@Email NVARCHAR(50),
+		@IsRegistrationConfirmed BIT,
+		@RegistrationConfirmedAt DATETIME,
+		@IsActive BIT
 AS
 BEGIN
 	SET NOCOUNT ON;
@@ -217,6 +220,69 @@ BEGIN
 		ELSE BEGIN
 			UPDATE Users
 				SET IdRole = @IdRole,
+					FirstName = @FirstName,
+					LastName = @LastName,
+					Email = @Email,
+					IsRegistrationConfirmed = @IsRegistrationConfirmed,
+					RegistrationConfirmedAt = @RegistrationConfirmedAt,
+					IsActive = @IsActive
+			WHERE IdUser = @IdUser
+
+			INSERT INTO @Result(ResultStatus, ResultMessage, OperationType, AffectedRecordId, OperationDateTime)
+			VALUES (1, 'Data has been sucessfully updated', 'UPDATE', @IdUser, GETDATE())
+
+			COMMIT TRANSACTION TrnxUpCategories
+		END
+	END TRY
+	
+	
+	BEGIN CATCH
+		IF @@TRANCOUNT > 0
+		BEGIN
+			ROLLBACK TRANSACTION TrnUpdating
+		END
+
+		INSERT INTO @Result(ResultStatus, ResultMessage, OperationType, AffectedRecordId, OperationDateTime)
+		VALUES(0, ERROR_MESSAGE(), 'ERROR', @IdUser, GETDATE())
+
+	END CATCH
+	SET NOCOUNT OFF;
+	
+	SELECT * FROM @Result
+END
+GO
+
+/** UPDATE **/
+CREATE OR ALTER PROCEDURE
+	Ups_UsersProfile_Update
+		@IdUser INT,
+		@FirstName NVARCHAR(20),
+		@LastName NVARCHAR(20),
+		@Email NVARCHAR(50)
+AS
+BEGIN
+	SET NOCOUNT ON;
+	DECLARE @Result AS TABLE
+	(
+		ResultStatus BIT,
+		ResultMessage VARCHAR(100),
+		OperationType VARCHAR(20),
+		AffectedRecordId INT,
+		OperationDateTime DATETIME
+	)
+	BEGIN TRY
+		BEGIN TRANSACTION TrnxUpCategories
+
+		IF NOT EXISTS(SELECT 1 FROM [dbo].[Users] WHERE IdUser = @IdUser)
+		BEGIN
+			INSERT INTO @Result(ResultStatus, ResultMessage, OperationType, AffectedRecordId, OperationDateTime)
+			SELECT 0, 'Error: caterory not found', 'NONE', NULL, GETDATE()
+
+			ROLLBACK TRANSACTION TrnxUpCategories
+		END
+		ELSE BEGIN
+			UPDATE Users
+				SET 
 					FirstName = @FirstName,
 					LastName = @LastName,
 					Email = @Email

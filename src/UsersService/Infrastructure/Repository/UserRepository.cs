@@ -25,13 +25,14 @@ namespace UsersService.Infrastructure.Repository
         #endregion
 
         #region Methods
-        public async Task<DatabaseResult?> CreateUserAsync(AddUserDTO userDTO)
+        public async Task<DatabaseResult> CreateUserAsync(AddUserDTO userDTO)
         {
             using (var connection = _connectionFactory.GetConnection(OCC_Connection))
             {
+                connection.Open();
+
                 using (var transaction = connection.BeginTransaction())
                 {
-                    connection.Open();
                     try
                     {
                         var query = "Usp_Users_Add";
@@ -58,8 +59,26 @@ namespace UsersService.Infrastructure.Repository
                     {
                         transaction.Rollback();
                         _globalExceptionHandler.HandleGenericException<string>(ex, "UserRepository.CreateUserAsync");
+                        return new DatabaseResult
+                        {
+                            ResultStatus = false,
+                            ResultMessage = ex.Message,
+                            OperationType = "CREATE",
+                            AffectedRecordId = 0,
+                            OperationDateTime = DateTime.Now,
+                            ExceptionMessage = ex.Message
+                        };
                     }
-                    return null;
+
+                    return new DatabaseResult
+                    {
+                        ResultStatus = false,
+                        ResultMessage = "",
+                        OperationType = "CREATE",
+                        AffectedRecordId = 0,
+                        OperationDateTime = DateTime.Now,
+                        ExceptionMessage = ""
+                    };
                 }
             }
         }
@@ -110,6 +129,13 @@ namespace UsersService.Infrastructure.Repository
                 catch (Exception ex)
                 {
                     _globalExceptionHandler.HandleGenericException<string>(ex, "UserRepository.GetUserByIdAsync");
+                }
+                finally
+                {
+                    if (connection.State == ConnectionState.Open)
+                    {
+                        connection.Close();
+                    }
                 }
                 return new RetrieveDatabaseResult<UserRetrieveDTO>();
             }
@@ -172,24 +198,86 @@ namespace UsersService.Infrastructure.Repository
             }
         }
 
-        public Task<DatabaseResult> UpdateUserAsync(UserRetrieveDTO userDTO)
+        public async Task<RetrieveDatabaseResult<List<UserRetrieveDTO>>> SearchUsersAsync(string firstName, string lastName, string email)
         {
             using (var connection = _connectionFactory.GetConnection(OCC_Connection))
             {
+                connection.Open();
+
+                try
+                {
+                    var sql = "";
+                    var parameters = new DynamicParameters();
+
+                    if (!string.IsNullOrEmpty(firstName))
+                    {
+                        sql += "";
+                        parameters.Add("");
+                    }
+
+                    if (!string.IsNullOrEmpty(lastName))
+                    {
+                        sql += "";
+                        parameters.Add("");
+                    }
+
+                    if (!string.IsNullOrEmpty(email))
+                    {
+                        sql += "";
+                        parameters.Add("");
+                    }
+
+                    var results = await connection.QueryAsync<UserRetrieveDTO>(sql, parameters);
+
+                    return new RetrieveDatabaseResult<List<UserRetrieveDTO>>
+                    {
+                        Details = results.ToList(),
+                        ResultStatus = true,
+                        ResultMessage = "Users retrieved successfully",
+                        OperationType = "SEARCH",
+                        AffectedRecordId = 0,
+                        OperationDateTime = DateTime.Now,
+                        ExceptionMessage = ""
+                    };
+                }
+                catch (Exception ex)
+                {
+                    _globalExceptionHandler.HandleGenericException<string>(ex, "SearchUsersAsync");
+                    return new RetrieveDatabaseResult<List<UserRetrieveDTO>>
+                    {
+                        Details = null,
+                        ResultStatus = false,
+                        ResultMessage = $"Error retrieving users: {ex.Message}",
+                        OperationType = "GET ALL",
+                        AffectedRecordId = 0,
+                        OperationDateTime = DateTime.Now,
+                        ExceptionMessage = ex.Message
+                    };
+                }
+            }
+        }
+
+        public async Task<DatabaseResult> UpdateUserAsync(UserRetrieveDTO userDTO)
+        {
+            using (var connection = _connectionFactory.GetConnection(OCC_Connection))
+            {
+                connection.Open();
                 using (var transaction = connection.BeginTransaction())
                 {
-                    connection.Open();
                     try
                     {
                         var query = "Ups_Users_Update";
                         var parameters = new DynamicParameters();
                         parameters.Add("@IdUser", userDTO.IdUser);
                         parameters.Add("@IdRole", userDTO.IdRole);
-                        parameters.Add("@FirtsName", userDTO.FirstName);
+                        parameters.Add("@FirstName", userDTO.FirstName);
                         parameters.Add("@LastName", userDTO.LastName);
                         parameters.Add("@Email", userDTO.Email);
+                        parameters.Add("@IsRegistrationConfirmed", userDTO.IsRegistrationConfirmed);
+                        parameters.Add("@RegistrationConfirmedAt", userDTO.RegistrationConfirmedAt);
+                        parameters.Add("@IsActive", userDTO.IsActive);
 
-                        var results = connection.QuerySingleAsync<DatabaseResult>(query, parameters, transaction, commandType: CommandType.StoredProcedure);
+                        var results = await connection.QuerySingleAsync<DatabaseResult>(query, parameters, transaction, commandType: CommandType.StoredProcedure);
 
                         transaction.Commit();
 
@@ -199,7 +287,7 @@ namespace UsersService.Infrastructure.Repository
                         }
                         else
                         {
-                            return Task.FromResult(new DatabaseResult
+                            return await Task.FromResult(new DatabaseResult
                             {
                                 ResultStatus = false,
                                 ResultMessage = "User not found",
@@ -214,7 +302,7 @@ namespace UsersService.Infrastructure.Repository
                     {
                         transaction.Rollback();
                         _globalExceptionHandler.HandleGenericException<string>(ex, "UserRepository.UpdateUserAync");
-                        return Task.FromResult(new DatabaseResult
+                        return await Task.FromResult(new DatabaseResult
                         {
                             ResultStatus = false,
                             ResultMessage = $"Error updating user: {ex.Message}",
@@ -224,6 +312,75 @@ namespace UsersService.Infrastructure.Repository
                             ExceptionMessage = ex.Message
                         });
                     }
+                    finally
+                    {
+                        if (connection.State == ConnectionState.Open)
+                        {
+                            connection.Close();
+                        }
+                    }
+                }
+            }
+        }
+
+        public async Task<DatabaseResult> UpdateUserProfileAsync(UserProfileDTO userProfile)
+        {
+            using (var connection = _connectionFactory.GetConnection(OCC_Connection))
+            {
+                connection.Open();
+                using (var transaction = connection.BeginTransaction())
+                {
+                    try
+                    {
+                        var query = "Ups_UsersProfile_Update";
+                        var parameters = new DynamicParameters();
+                        parameters.Add("@IdUser", userProfile.IdUser);
+                        parameters.Add("@FirstName", userProfile.FirstName);
+                        parameters.Add("@LastName", userProfile.LastName);
+                        parameters.Add("@Email", userProfile.Email);
+
+                        var results = await connection.QuerySingleAsync<DatabaseResult>(query, parameters, transaction, commandType: CommandType.StoredProcedure);
+
+                        transaction.Commit();
+
+                        if (results != null)
+                        {
+                            return results;
+                        }
+                        else
+                        {
+                            return await Task.FromResult(new DatabaseResult
+                            {
+                                ResultStatus = false,
+                                ResultMessage = "User not found",
+                                OperationType = "UPDATE",
+                                AffectedRecordId = 0,
+                                OperationDateTime = DateTime.Now,
+                                ExceptionMessage = "No exceptions found"
+                            });
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        transaction.Rollback();
+                        _globalExceptionHandler.HandleGenericException<string>(ex, "UserRepository.UpdateUserProfileAsync");
+                        return await Task.FromResult(new DatabaseResult
+                        {
+                            ResultStatus = false,
+                            ResultMessage = $"Error updating profile: {ex.Message}",
+                            OperationType = "UPDATE",
+                            AffectedRecordId = 0,
+                            OperationDateTime = DateTime.Now,
+                            ExceptionMessage = ex.Message
+                        }); ;
+                    }
+                    finally
+                    {
+                        if (connection.State == ConnectionState.Open)
+                        {
+                            connection.Close();
+                        }
+                    }
                 }
             }
         }
@@ -232,9 +389,9 @@ namespace UsersService.Infrastructure.Repository
         {
             using (var connection = _connectionFactory.GetConnection(OCC_Connection))
             {
+                connection.Open();
                 using (var transaction = connection.BeginTransaction())
                 {
-                    connection.Open();
                     try
                     {
                         var query = "Usp_Users_Delete";
@@ -265,6 +422,8 @@ namespace UsersService.Infrastructure.Repository
                 }
             }
         }
+
+
         #endregion
     }
 }
