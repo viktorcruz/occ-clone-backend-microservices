@@ -32,9 +32,9 @@ namespace UsersService.Domain.Core
             return await _userRepository.GetAllUsersAsync();
         }
 
-        public async Task<RetrieveDatabaseResult<List<UserRetrieveDTO>>> SearchUserAsync()
+        public async Task<RetrieveDatabaseResult<List<UserRetrieveDTO>>> SearchUsersAsync(string firstName, string lastName, string email)
         {
-            return await _userRepository.SearchUserAsync();
+            return await _userRepository.SearchUsersAsync(firstName, lastName, email);
         }
 
         public async Task<DatabaseResult> UpdateUserAsync(UserRetrieveDTO userDTO)

@@ -51,7 +51,7 @@ namespace UsersService.Controllers
         {
             try
             {
-                var query = new GetUserByIdQuery.TaskQuery(userId);
+                var query = new GetUserByIdQuery(userId);
                 var endpointResponse = await _mediator.Send(query);
                 if (endpointResponse.IsSuccess)
                 {
@@ -163,6 +163,26 @@ namespace UsersService.Controllers
             catch (Exception ex)
             {
                 _globalExceptionHandler.HandleGenericException<string>(ex, "UserController.DeactivateUser");
+                return StatusCode(500);
+            }
+        }
+
+        [HttpPut("{userId}/activate-user")]
+        public async Task<IActionResult> ActivateUser(int userId)
+        {
+            try
+            {
+                var command = new ActivateUserCommand(userId);
+                var endpointResponse = await _mediator.Send(command);
+                if (endpointResponse.IsSuccess) 
+                {
+                    return Ok(endpointResponse);
+                }
+                return BadRequest(endpointResponse);
+            }
+            catch(Exception ex)
+            {
+                _globalExceptionHandler.HandleGenericException<string>(ex, "UserController.ActivateUser");
                 return StatusCode(500);
             }
         }

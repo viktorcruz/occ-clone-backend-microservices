@@ -24,7 +24,7 @@ namespace UsersService.Persistence.Data
             var connectionString = _configuration.GetConnectionString(connectionName);
             if (connectionString == null)
             {
-                throw new ArgumentException("La cadena de conexion no puede ser nul a vacia", nameof(connectionName));
+                throw new ArgumentException("Connection name must not be empty", nameof(connectionName));
             }
             return new SqlConnection(connectionString);
         }

@@ -33,10 +33,7 @@ namespace UsersService.Application.Queries.Handlers
             try
             {
 
-                var result = await _userDomain.SearchUserAsync(
-                    request.FirstName,
-                    request.LastName,
-                    request.Email);
+                var result = await _userDomain.SearchUsersAsync(request.FirstName, request.LastName, request.Email);
 
                 if (result.ResultStatus)
                 {

@@ -1,11 +1,10 @@
 ﻿using MediatR;
 using SharedKernel.Interface;
-using UsersService.Application.Dto;
 using UsersService.Domain.Interface;
 
 namespace UsersService.Application.Commands.Handlers
 {
-    public class DeactivateUserCommandHandler : IRequestHandler<DeactivateUserCommand, IEndpointResponse<IDatabaseResult>>
+    public class ActivateUserCommandHandler : IRequestHandler<ActivateUserCommand, IEndpointResponse<IDatabaseResult>>
     {
         #region Properties
         private readonly IUserDomain _userDomain;
@@ -14,43 +13,44 @@ namespace UsersService.Application.Commands.Handlers
         #endregion
 
         #region Constructor
-        public DeactivateUserCommandHandler(
+        public ActivateUserCommandHandler(
             IUserDomain userDomain,
             IGlobalExceptionHandler globalExceptionHandler,
-            IEndpointResponse<IDatabaseResult> endpointResponse)
+            IEndpointResponse<IDatabaseResult> endpointResponse
+            )
         {
             _userDomain = userDomain;
-            _globalExceptionHandler = globalExceptionHandler;
+            _globalExceptionHandler = globalExceptionHandler;   
             _endpointResponse = endpointResponse;
         }
         #endregion
 
         #region Methods
-        public async Task<IEndpointResponse<IDatabaseResult>> Handle(DeactivateUserCommand request, CancellationToken cancellationToken)
+        public async Task<IEndpointResponse<IDatabaseResult>> Handle(ActivateUserCommand request, CancellationToken cancellationToken)
         {
             try
             {
                 var response = await _userDomain.GetUserByIdAsync(request.IdUser);
                 _endpointResponse.Result = response;
 
-                if (response != null && response.ResultStatus)
+                if(response != null && response.ResultStatus)
                 {
                     var userDto = response.Details;
-                    userDto.IsActive = false;
+                    userDto.IsActive = true;
                     //userDto.IsRegistrationConfirmed = false;
                     //userDto.RegistrationConfirmedAt = DateTime.UtcNow;
 
-                    var updateResult = await _userDomain.UpdateUserAsync(userDto);
+                    var updateRestult = await _userDomain.UpdateUserAsync(userDto);
 
-                    if (updateResult.ResultStatus)
+                    if(updateRestult != null)
                     {
                         _endpointResponse.IsSuccess = true;
-                        _endpointResponse.Message = "User successfully deactivated";
+                        _endpointResponse.Message = "User sucessfully activated";
                     }
                     else
                     {
                         _endpointResponse.IsSuccess = false;
-                        _endpointResponse.Message = "Failed to deactivate user";
+                        _endpointResponse.Message = "Filed to activate user";
                     }
                 }
                 else
@@ -59,9 +59,9 @@ namespace UsersService.Application.Commands.Handlers
                     _endpointResponse.Message = "User not found";
                 }
             }
-            catch (Exception ex)
+            catch(Exception ex)
             {
-                _globalExceptionHandler.HandleGenericException<string>(ex, "DeactiveUserCommandHandler");
+                _globalExceptionHandler.HandleGenericException<string>(ex, "ActivateUserCommandHandler");
                 _endpointResponse.IsSuccess = false;
                 _endpointResponse.Message = ex.Message;
             }
