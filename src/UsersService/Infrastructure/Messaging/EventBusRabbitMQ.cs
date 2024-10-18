@@ -1,4 +1,5 @@
-﻿using RabbitMQ.Client;
+﻿using Dapper;
+using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 using System.Text;
 using System.Text.Json;
@@ -7,7 +8,7 @@ using UsersService.Infrastructure.Interface;
 
 namespace UsersService.Infrastructure.Messaging
 {
-    public class EventBusRabbitMQ
+    public class EventBusRabbitMQ : IEventBus
     {
         private readonly IModel _channel;
         private readonly ILogger<EventBusRabbitMQ> _logger;
@@ -23,38 +24,45 @@ namespace UsersService.Infrastructure.Messaging
             _eventLogRepository = eventLogRepository;
         }
 
-        public void Publish(string exchange, string routingKey, object eventMessage)
+
+        public void Publish<T>(string exchange, string routingKey, T @event)
         {
-            var body = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(eventMessage));
-            _channel.ExchangeDeclare(exchange, "direct");
+            var message = JsonSerializer.Serialize(@event);
+            var body = Encoding.UTF8.GetBytes(message);
+
+            // TODO: declare the exchange and  publish the message
+            _channel.ExchangeDeclare(exchange, "direct", durable: true);
             _channel.BasicPublish(exchange, routingKey, null, body);
 
-            _logger.LogInformation($"Event published to exchange '{exchange}' with routing key '{routingKey}': {JsonSerializer.Serialize(eventMessage)}");
-            _eventLogRepository.SaveEventLog("Publish", JsonSerializer.Serialize(eventMessage), exchange, routingKey);
+            // TODO: save the log of the published event in the db
+            var parameters = new DynamicParameters();
+            parameters.Add("@EventName", "Publish");
+            parameters.Add("@EventData", message);
+            parameters.Add("@Exchange", exchange);
+            parameters.Add("@RoutingKey", routingKey);
 
+            _eventLogRepository.SaveEventLog("Usp_EventLog_Add", parameters);
+
+            _logger.LogInformation($"Published event: {message}");
         }
 
-        public void Subscribe<T>(string queue, string exchange, string routingKey, Action<T> handleMessage)
+
+        public void Subscribe<T>(string exchange, string routingKey, Func<T, Task> handler)
         {
-            _channel.QueueDeclare(queue, true, false, false, null);
-            _channel.QueueBind(queue, exchange, routingKey);
+            _channel.QueueDeclare(routingKey, durable: false, exclusive: false, autoDelete: false, arguments: null);
+            _channel.QueueBind(routingKey, exchange, routingKey);
 
             var consumer = new EventingBasicConsumer(_channel);
-            consumer.Received += (model, ea) =>
+            consumer.Received += async (model, ea) =>
             {
                 var body = ea.Body.ToArray();
                 var message = Encoding.UTF8.GetString(body);
-                var eventMessage = JsonSerializer.Deserialize<T>(message);
+                var @event = JsonSerializer.Deserialize<T>(message);
 
-                _logger.LogInformation($"Event reaceived from exchange '{exchange}' with routing key '{routingKey}': {message}");
-                _eventLogRepository.SaveEventLog("Subscribe", message, exchange, routingKey);
-
-                handleMessage(eventMessage);
+                await handler(@event);
             };
 
-            _channel.BasicConsume(queue, true, consumer);
+            _channel.BasicConsume(queue: routingKey, autoAck: true, consumer: consumer);
         }
-
-
     }
 }

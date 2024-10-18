@@ -34,11 +34,6 @@ namespace UsersService.Application.Commands.Handlers
         #region Methods
         public async Task<IEndpointResponse<IDatabaseResult>> Handle(CreateUserCommand request, CancellationToken cancellationToken)
         {
-            // TODO:
-            // create user
-            // valid and user creation
-            // publish event: UserCreatedEvent
-
             try
             {
                 var user = new AddUserDTO
@@ -57,16 +52,23 @@ namespace UsersService.Application.Commands.Handlers
                     _endpointResponse.IsSuccess = true;
                     _endpointResponse.Message = "User created successful";
 
-                    // publish the event: UserCreatedEvent, through rabbitmq
-                    var userCreatedEvent = new UserCreatedEvent
+                    var additionalData = new
                     {
-                        UserId = response.AffectedRecordId,
                         FirstName = request.FirstName,
                         LastName = request.LastName,
-                        Email = request.Email
+                        Email = request.Email,
                     };
 
-                    _eventBus.Publish("UserExchange", "UserCreated", userCreatedEvent);
+                    var entityOperationEvent = new EntityOperationEvent(
+                        entityName: "User",
+                        operationType: "Create",
+                        success: true,
+                        performedBy: "Admin",
+                        reason: response.ResultStatus.ToString(),
+                        additionalData: additionalData
+                    );
+
+                    _eventBus.Publish("UserExchange", "UserCreated", entityOperationEvent);
                 }
                 else
                 {
@@ -81,14 +83,9 @@ namespace UsersService.Application.Commands.Handlers
                 _endpointResponse.IsSuccess = false;
                 _endpointResponse.Message = $"Error creating user: {ex.Message}";
 
-                // publish the error event
-                var userCreationFailedEvent = new UserCreationFailedEvent(
-                    ex.Message,
-                    request.FirstName + " " + request.LastName,
-                    request.Email,
-                    DateTime.UtcNow);
+                var failedEvent = new EntityOperationEvent(entityName: "User", operationType: "Create", success: false, performedBy: "AdminUser");
 
-                _eventBus.Publish("UserExchange", "UserCreationFailed", userCreationFailedEvent);
+                _eventBus.Publish("UserExchange", "UserCreationFailed", failedEvent);
             }
             return _endpointResponse;
         }

@@ -31,7 +31,6 @@
     <Folder Include="SharedKernel\Helpers\" />
     <Folder Include="SharedKernel\Interface\" />
     <Folder Include="SharedKernel\Mapper\" />
-    <Folder Include="Transversal\" />
   </ItemGroup>
 
 </Project>

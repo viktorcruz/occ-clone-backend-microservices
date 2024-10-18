@@ -1,6 +1,8 @@
 ﻿using MediatR;
 using SharedKernel.Interface;
+using UsersService.Domain.Events;
 using UsersService.Domain.Interface;
+using UsersService.Infrastructure.Messaging;
 
 namespace UsersService.Application.Commands.Handlers
 {
@@ -10,18 +12,21 @@ namespace UsersService.Application.Commands.Handlers
         private readonly IUserDomain _userDomain;
         private readonly IGlobalExceptionHandler _globalExceptionHandler;
         private readonly IEndpointResponse<IDatabaseResult> _endpointResponse;
+        private readonly EventBusRabbitMQ _eventBus;
         #endregion
 
         #region Constructor
         public ActivateUserCommandHandler(
             IUserDomain userDomain,
             IGlobalExceptionHandler globalExceptionHandler,
-            IEndpointResponse<IDatabaseResult> endpointResponse
+            IEndpointResponse<IDatabaseResult> endpointResponse,
+            EventBusRabbitMQ eventBus
             )
         {
             _userDomain = userDomain;
             _globalExceptionHandler = globalExceptionHandler;   
             _endpointResponse = endpointResponse;
+            _eventBus = eventBus;
         }
         #endregion
 
@@ -37,8 +42,6 @@ namespace UsersService.Application.Commands.Handlers
                 {
                     var userDto = response.Details;
                     userDto.IsActive = true;
-                    //userDto.IsRegistrationConfirmed = false;
-                    //userDto.RegistrationConfirmedAt = DateTime.UtcNow;
 
                     var updateRestult = await _userDomain.UpdateUserAsync(userDto);
 
@@ -46,6 +49,26 @@ namespace UsersService.Application.Commands.Handlers
                     {
                         _endpointResponse.IsSuccess = true;
                         _endpointResponse.Message = "User sucessfully activated";
+
+                        var additionalData = new
+                        {
+                            IdUser = userDto.IdUser,
+                            FirstName = userDto.FirstName,
+                            LastName = userDto.LastName,
+                            Email = userDto.Email,
+                            IsActivated = true,
+                        };
+
+                        var entityOperationEvent = new EntityOperationEvent(
+                            entityName: "User",
+                            operationType: "Activate",
+                            success: true,
+                            performedBy: "Admin",
+                            reason: response.ResultStatus.ToString(),
+                            additionalData: additionalData
+                            );
+
+                        _eventBus.Publish("UserExchange", "UserActivatedEvent", entityOperationEvent);
                     }
                     else
                     {
@@ -64,6 +87,10 @@ namespace UsersService.Application.Commands.Handlers
                 _globalExceptionHandler.HandleGenericException<string>(ex, "ActivateUserCommandHandler");
                 _endpointResponse.IsSuccess = false;
                 _endpointResponse.Message = ex.Message;
+
+                var failedEvent = new EntityOperationEvent(entityName: "User", operationType: "Activate", success: false, performedBy: "AdminUser");
+
+                _eventBus.Publish("UserExchange", "UserDeactivatedEvent", failedEvent);
             }
             return _endpointResponse;
         }

@@ -62,7 +62,7 @@ BEGIN
 			ROLLBACK TRANSACTION 
 		END
 		ELSE BEGIN
-			INSERT INTO [dbo].[Users](idRole, FirstName, LastName, Email, CreationDate)
+			INSERT INTO [dbo].[Users](IdRole, FirstName, LastName, Email, CreationDate)
 			VALUES(@IdRole, @FirstName, @LastName, @Email, GETDATE())
 
 			DECLARE @LastId INT = (SELECT SCOPE_IDENTITY())
@@ -95,7 +95,7 @@ GO
 /** GET **/
 CREATE OR ALTER PROCEDURE
 	Usp_Users_Get
-		@idUser INT
+		@IdUser INT
 AS
 BEGIN
 	SET NOCOUNT ON;
@@ -115,12 +115,12 @@ BEGIN
 		)
 
 		BEGIN TRY
-			IF EXISTS( SELECT 1 FROM Users (nolock) WHERE idUser = @idUser )
+			IF EXISTS( SELECT 1 FROM Users (nolock) WHERE IdUser = @IdUser )
 			BEGIN
 				INSERT INTO @Result(ResultStatus, ResultMessage, OperationType, AffectedRecordId, OperationDateTime, IdUser, IdRole, FirstName, LastName, Email, CreationDate)
-				SELECT 1, 'User found', 'GET', 0, GETDATE(), IdUser, idRole, FirstName, LastName, Email, CreationDate
+				SELECT 1, 'User found', 'GET', 0, GETDATE(), IdUser, IdRole, FirstName, LastName, Email, CreationDate
 				FROM Users (nolock)  
-				WHERE idUser = @idUser
+				WHERE IdUser = @IdUser
 
 			END
 			ELSE
@@ -316,7 +316,7 @@ GO
 /** DELETE **/
 CREATE OR ALTER PROCEDURE
 	Usp_Users_Delete
-		@idUser INT
+		@IdUser INT
 AS
 BEGIN
 	SET NOCOUNT ON;
@@ -333,18 +333,18 @@ BEGIN
 		BEGIN TRANSACTION TDEL
 
 			DELETE FROM Users
-			WHERE idUser = @idUser
+			WHERE IdUser = @IdUser
 
 		IF @@ROWCOUNT = 0
 		BEGIN
 			INSERT INTO @Result(ResultStatus, ResultMessage, OperationType, AffectedRecordId, OperationDateTime)
-			VALUES(0, 'Error: User not found', 'NONE', @idUser, GETDATE())
+			VALUES(0, 'Error: User not found', 'NONE', @IdUser, GETDATE())
 
 			ROLLBACK TRANSACTION TDEL
 		END
 		ELSE BEGIN
 			INSERT INTO @Result(ResultStatus, ResultMessage, OperationType, AffectedRecordId, OperationDateTime)
-			VALUES(1, 'Data has been sucessfully deleted', 'DELETE', @idUser, GETDATE())
+			VALUES(1, 'Data has been sucessfully deleted', 'DELETE', @IdUser, GETDATE())
 
 			COMMIT TRANSACTION TDEL
 		END
@@ -358,7 +358,7 @@ BEGIN
 		SET @ErrorMessage = ERROR_MESSAGE()
 
 		INSERT INTO @Result(ResultStatus, ResultMessage, OperationType, AffectedRecordId, OperationDateTime)
-		VALUES(0, @ErrorMessage, 'NONE', @idUser, GETDATE())
+		VALUES(0, @ErrorMessage, 'NONE', @IdUser, GETDATE())
 	END CATCH
 
 	SET NOCOUNT OFF;
@@ -370,9 +370,9 @@ END
 
 EXEC Usp_Users_Add @Name = 'User 1'
 EXEC Ups_Users_Update @CategoryId = 1, @Name = 'User 2'
-EXEC Usp_Users_Get @idUser = 4
+EXEC Usp_Users_Get @IdUser = 4
 EXEC Usp_Users_GetAll
-EXEC Usp_Users_Delete @idUser = 3
+EXEC Usp_Users_Delete @IdUser = 3
 
 
 INSERT INTO Roles(RoleName) VALUES('Recuiter'), ('Applicant')

@@ -43,14 +43,14 @@ GO
 
 CREATE TABLE Roles
 (
-	idRole INT IDENTITY(1,1) PRIMARY KEY CLUSTERED,
+	IdRole INT IDENTITY(1,1) PRIMARY KEY CLUSTERED,
 	RoleName NVARCHAR(20) NOT NULL
 )
 
 CREATE TABLE Users
 (
-	idUser INT IDENTITY(1,1) PRIMARY KEY CLUSTERED,
-	idRole INT NOT NULL,
+	IdUser INT IDENTITY(1,1) PRIMARY KEY CLUSTERED,
+	IdRole INT NOT NULL,
 	FirstName NVARCHAR(20) NOT NULL,
 	LastName NVARCHAR(20) NOT NULL,
 	Email NVARCHAR(50) UNIQUE NOT NULL,
@@ -62,7 +62,7 @@ CREATE TABLE Users
 
 ALTER TABLE Users
 	WITH CHECK ADD CONSTRAINT [FK_Users_Roles]
-	FOREIGN KEY([idRole]) REFERENCES Roles([idRole])
+	FOREIGN KEY([IdRole]) REFERENCES Roles([IdRole])
 
 
 CREATE TABLE Publications
@@ -72,17 +72,17 @@ CREATE TABLE Publications
 	Title NVARCHAR(20) NOT NULL,
 	Description NVARCHAR(100),
 	PublicationDate DATETIME NOT NULL,
-	idRole INT NOT NULL,
+	IdRole INT NOT NULL,
 	Status BIT NOT NULL,
 	ExpirationDate DATETIME NOT NULL
 )
 
 ALTER TABLE Publications
 	WITH CHECK ADD CONSTRAINT [FK_Publications_Users]
-	FOREIGN KEY([idRecruiter]) REFERENCES Users([idUser])
+	FOREIGN KEY([idRecruiter]) REFERENCES Users([IdUser])
 ALTER TABLE Publications
 	WITH CHECK ADD CONSTRAINT [FK_Publications_Roles]
-	FOREIGN KEY([idRole]) REFERENCES Roles([idRole])
+	FOREIGN KEY([IdRole]) REFERENCES Roles([IdRole])
 
 CREATE TABLE SelectionProcess
 (
@@ -98,13 +98,13 @@ ALTER TABLE SelectionProcess
 	FOREIGN KEY([idPublication]) REFERENCES Publications([idPublication])
 ALTER TABLE SelectionProcess
 	WITH CHECK ADD CONSTRAINT [FK_SelectionProcess_Users]
-	FOREIGN KEY([idApplicant]) REFERENCES Users([idUser])
+	FOREIGN KEY([idApplicant]) REFERENCES Users([IdUser])
 	   
 
 
 INSERT INTO Roles(RoleName) VALUES('Recruiter'),('Applicant')
 
-INSERT INTO Users(idRole, FirstName, LastName, Email, CreationDate, IsActive, IsRegistrationConfirmed, RegistrationConfirmedAt)
+INSERT INTO Users(IdRole, FirstName, LastName, Email, CreationDate, IsActive, IsRegistrationConfirmed, RegistrationConfirmedAt)
 VALUES(1,'Karla','Fuentes Nolasco','karla.fuente@fake.com',GETDATE(),0,0, GETDATE()),
 		(1,'Oscar','Kala Haak','oscar.kala@fake.com',GETDATE(),0,0, GETDATE()),
 		(1,'Maria','Torres','maria.torres@fake.com',GETDATE(),0,0, GETDATE()),

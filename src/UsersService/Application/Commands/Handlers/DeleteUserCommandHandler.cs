@@ -1,6 +1,8 @@
 ﻿using MediatR;
 using SharedKernel.Interface;
+using UsersService.Domain.Events;
 using UsersService.Domain.Interface;
+using UsersService.Infrastructure.Messaging;
 
 namespace UsersService.Application.Commands.Handlers
 {
@@ -10,15 +12,21 @@ namespace UsersService.Application.Commands.Handlers
         private readonly IUserDomain _usersDomain;
         private readonly IGlobalExceptionHandler _globalExceptionHandler;
         private readonly IEndpointResponse<IDatabaseResult> _endpointResponse;
+        private readonly EventBusRabbitMQ _eventBus;
         #endregion
 
         #region Constructor
-        public DeleteUserCommandHandler(IUserDomain usersDomain, IGlobalExceptionHandler globalExceptionHandler, IEndpointResponse<IDatabaseResult> endpointResponse)
+        public DeleteUserCommandHandler(
+            IUserDomain usersDomain,
+            IGlobalExceptionHandler globalExceptionHandler,
+            IEndpointResponse<IDatabaseResult> endpointResponse,
+            EventBusRabbitMQ eventBus
+            )
         {
             _usersDomain = usersDomain;
             _globalExceptionHandler = globalExceptionHandler;
             _endpointResponse = endpointResponse;
-
+            _eventBus = eventBus;
         }
         #endregion
 
@@ -34,6 +42,25 @@ namespace UsersService.Application.Commands.Handlers
                 {
                     _endpointResponse.IsSuccess = true;
                     _endpointResponse.Message = "User deleted successful";
+
+
+                    var additionalData = new
+                    {
+                        IdUser = request.idUser,
+                        IsDeleted = true
+                    };
+
+                    var entityOperationEvent = new EntityOperationEvent(
+                        entityName: "User",
+                        operationType: "Delete",
+                        success: true,
+                        performedBy: "Admin",
+                        reason: response.ResultStatus.ToString(),
+                        additionalData: additionalData
+                        );
+
+                    _eventBus.Publish("UserExchange", "UserDeletedEvent", entityOperationEvent);
+
                 }
                 else
                 {
@@ -46,6 +73,11 @@ namespace UsersService.Application.Commands.Handlers
                 _globalExceptionHandler.HandleGenericException<string>(ex, "DeleteUserCommand.Handle");
                 _endpointResponse.IsSuccess = false;
                 _endpointResponse.Message = $"Error deleting user: {ex.Message}";
+
+                var failedEvent = new EntityOperationEvent(entityName: "User", operationType: "Delete", success: false, performedBy: "AdminUser");
+
+                _eventBus.Publish("UserExchange", "UserDeletedFailed", failedEvent);
+
             }
             return _endpointResponse;
         }

@@ -10,6 +10,7 @@ var builder = WebApplication.CreateBuilder(args);
 var configurationManager = builder.Configuration;
 var environment = builder.Environment;
 
+
 builder.Services.AddMediatR(config =>
 {
     config.RegisterServicesFromAssembly(typeof(GetUserByIdQuery).Assembly);

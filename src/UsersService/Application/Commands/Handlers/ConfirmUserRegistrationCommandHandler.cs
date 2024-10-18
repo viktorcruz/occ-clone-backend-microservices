@@ -2,7 +2,9 @@
 using SharedKernel.Common.Responses;
 using SharedKernel.Interface;
 using UsersService.Application.Dto;
+using UsersService.Domain.Events;
 using UsersService.Domain.Interface;
+using UsersService.Infrastructure.Messaging;
 
 namespace UsersService.Application.Commands.Handlers
 {
@@ -12,14 +14,21 @@ namespace UsersService.Application.Commands.Handlers
         private readonly IUserDomain _userDomain;
         private readonly IGlobalExceptionHandler _globalExceptionHandler;
         private readonly IEndpointResponse<RetrieveDatabaseResult<UserRetrieveDTO>> _endpointResponse;
+        private readonly EventBusRabbitMQ _eventBus;
         #endregion
 
         #region Constructor
-        public ConfirmUserRegistrationCommandHandler(IUserDomain userDomain, IGlobalExceptionHandler globalExceptionHandler, IEndpointResponse<RetrieveDatabaseResult<UserRetrieveDTO>> endpointResponse)
+        public ConfirmUserRegistrationCommandHandler(
+            IUserDomain userDomain, 
+            IGlobalExceptionHandler globalExceptionHandler, 
+            IEndpointResponse<RetrieveDatabaseResult<UserRetrieveDTO>> endpointResponse,
+            EventBusRabbitMQ eventBus
+            )
         {
             _userDomain = userDomain;
             _globalExceptionHandler = globalExceptionHandler;
             _endpointResponse = endpointResponse;
+            _eventBus = eventBus;
         }
         #endregion
 
@@ -43,6 +52,25 @@ namespace UsersService.Application.Commands.Handlers
                     {
                         _endpointResponse.IsSuccess = true;
                         _endpointResponse.Message = "User registration cofirmed successfully";
+
+                        var additionalData = new
+                        {
+                            IdUser = userDto.IdUser,
+                            FirstName = userDto.FirstName,
+                            LastName = userDto.LastName,
+                            Email = userDto.Email
+                        };
+
+                        var entityOperationEvent = new EntityOperationEvent(
+                            entityName: "User",
+                            operationType: "Confirm",
+                            success: true,
+                            performedBy: "Admin",
+                            reason: response.ResultStatus.ToString(),
+                            additionalData: additionalData
+                            );
+
+                        _eventBus.Publish("UserExchange", "UserConfirmed", entityOperationEvent);
                     }
                     else
                     {
@@ -61,6 +89,11 @@ namespace UsersService.Application.Commands.Handlers
                 _globalExceptionHandler.HandleGenericException<string>(ex, "ConfirmUserRegistrationCommandHandler");
                 _endpointResponse.IsSuccess = false;
                 _endpointResponse.Message = ex.Message;
+
+                var failedEvent = new EntityOperationEvent(entityName: "User", operationType: "Confirm", success: false, performedBy: "AdminUser");
+
+                _eventBus.Publish("UserExchange", "UserConfirmedEvent", failedEvent);
+
             }
             return _endpointResponse;
         }

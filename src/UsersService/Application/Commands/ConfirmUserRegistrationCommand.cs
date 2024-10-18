@@ -5,10 +5,6 @@ using UsersService.Application.Dto;
 
 namespace UsersService.Application.Commands
 {
-    /// <summary>
-    /// Representa la accion de confirmar el registro de un usuario, que puede ser un paso 
-    /// especifico en el flujo de trabajo
-    /// </summary>
     public class ConfirmUserRegistrationCommand : IRequest<IEndpointResponse<RetrieveDatabaseResult<UserRetrieveDTO>>>
     {
         #region Properties

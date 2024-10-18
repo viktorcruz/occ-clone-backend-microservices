@@ -1,0 +1,6 @@
+@SearchJobsServcie_HostAddress = http://localhost:5133
+
+GET {{SearchJobsServcie_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

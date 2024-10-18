@@ -30,6 +30,10 @@ namespace UsersService.Controllers
         {
             try
             {
+                if (userDTO.IdRole == 0)
+                {
+                    return BadRequest();
+                }
                 var command = new CreateUserCommand(userDTO);
                 var endpointResponse = await _mediator.Send(command);
                 if (endpointResponse.IsSuccess)
@@ -82,6 +86,27 @@ namespace UsersService.Controllers
             catch (Exception ex)
             {
                 _globalExceptionHandler.HandleGenericException<string>(ex, "UserController.GetAllUsers");
+                return StatusCode(500);
+            }
+        }
+
+        [HttpGet("search-users")]
+        public async Task<IActionResult> SearchUsers([FromQuery] string? firstName, [FromQuery] string? lastName, [FromQuery] string? email)
+        {
+            try
+            {
+                var query = new SearchUsersQuery(firstName, lastName, email);
+                var endpointResponse = await _mediator.Send(query);
+
+                if(endpointResponse.IsSuccess)
+                {
+                    return Ok(endpointResponse);
+                }
+                return BadRequest(endpointResponse);
+            }
+            catch(Exception ex)
+            {
+                _globalExceptionHandler.HandleGenericException<string>(ex, "UserController.SearchUsers");
                 return StatusCode(500);
             }
         }
@@ -174,13 +199,13 @@ namespace UsersService.Controllers
             {
                 var command = new ActivateUserCommand(userId);
                 var endpointResponse = await _mediator.Send(command);
-                if (endpointResponse.IsSuccess) 
+                if (endpointResponse.IsSuccess)
                 {
                     return Ok(endpointResponse);
                 }
                 return BadRequest(endpointResponse);
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 _globalExceptionHandler.HandleGenericException<string>(ex, "UserController.ActivateUser");
                 return StatusCode(500);

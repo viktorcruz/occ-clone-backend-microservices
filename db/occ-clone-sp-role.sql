@@ -91,7 +91,7 @@ GO
 /** GET **/
 CREATE OR ALTER PROCEDURE
 	Usp_Roles_Get
-		@idRole INT
+		@IdRole INT
 AS
 BEGIN
 	SET NOCOUNT ON;
@@ -107,12 +107,12 @@ BEGIN
 		)
 
 		BEGIN TRY
-			IF EXISTS( SELECT 1 FROM Roles (nolock) WHERE idRole = @idRole )
+			IF EXISTS( SELECT 1 FROM Roles (nolock) WHERE IdRole = @IdRole )
 			BEGIN
 				INSERT INTO @Result(ResultStatus, ResultMessage, OperationType, AffectedRecordId, OperationDateTime, IdRole, RoleName)
-				SELECT 1, 'Role found', 'GET', 0, GETDATE(), idRole, RoleName
+				SELECT 1, 'Role found', 'GET', 0, GETDATE(), IdRole, RoleName
 				FROM Roles (nolock)  
-				WHERE idRole = @idRole
+				WHERE IdRole = @IdRole
 
 			END
 			ELSE
@@ -232,7 +232,7 @@ GO
 /** DELETE **/
 CREATE OR ALTER PROCEDURE
 	Usp_Roles_Delete
-		@idRole INT
+		@IdRole INT
 AS
 BEGIN
 	SET NOCOUNT ON;
@@ -249,18 +249,18 @@ BEGIN
 		BEGIN TRANSACTION TDEL
 
 			DELETE FROM Roles
-			WHERE idRole = @idRole
+			WHERE IdRole = @IdRole
 
 		IF @@ROWCOUNT = 0
 		BEGIN
 			INSERT INTO @Result(ResultStatus, ResultMessage, OperationType, AffectedRecordId, OperationDateTime)
-			VALUES(0, 'Error: Role not found', 'NONE', @idRole, GETDATE())
+			VALUES(0, 'Error: Role not found', 'NONE', @IdRole, GETDATE())
 
 			ROLLBACK TRANSACTION TDEL
 		END
 		ELSE BEGIN
 			INSERT INTO @Result(ResultStatus, ResultMessage, OperationType, AffectedRecordId, OperationDateTime)
-			VALUES(1, 'Data has been sucessfully deleted', 'DELETE', @idRole, GETDATE())
+			VALUES(1, 'Data has been sucessfully deleted', 'DELETE', @IdRole, GETDATE())
 
 			COMMIT TRANSACTION TDEL
 		END
@@ -274,7 +274,7 @@ BEGIN
 		SET @ErrorMessage = ERROR_MESSAGE()
 
 		INSERT INTO @Result(ResultStatus, ResultMessage, OperationType, AffectedRecordId, OperationDateTime)
-		VALUES(0, @ErrorMessage, 'NONE', @idRole, GETDATE())
+		VALUES(0, @ErrorMessage, 'NONE', @IdRole, GETDATE())
 	END CATCH
 
 	SET NOCOUNT OFF;
@@ -285,10 +285,10 @@ END
 /**
 
 EXEC Usp_Roles_Add @RoleName = 'User 1'
-EXEC Ups_Roles_Update @idRole = 1, @RoleName = 'User 2'
-EXEC Usp_Roles_Get @idRole = 4
+EXEC Ups_Roles_Update @IdRole = 1, @RoleName = 'User 2'
+EXEC Usp_Roles_Get @IdRole = 4
 EXEC Usp_Roles_GetAll
-EXEC Usp_Roles_Delete @idUser = 3
+EXEC Usp_Roles_Delete @IdUser = 3
 
 
 INSERT INTO Roles(RoleName) VALUES('Recuiter'), ('Applicant')

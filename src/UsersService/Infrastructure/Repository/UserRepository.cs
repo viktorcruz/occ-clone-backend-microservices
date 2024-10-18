@@ -206,25 +206,25 @@ namespace UsersService.Infrastructure.Repository
 
                 try
                 {
-                    var sql = "";
+                    var sql = "SELECT FirstName, LastName, Email, IsActive, IsRegistrationConfirmed FROM Users WHERE 1=1";
                     var parameters = new DynamicParameters();
 
                     if (!string.IsNullOrEmpty(firstName))
                     {
-                        sql += "";
-                        parameters.Add("");
+                        sql += " AND FirstName = @FirstName";
+                        parameters.Add("@FirstName", firstName);
                     }
 
                     if (!string.IsNullOrEmpty(lastName))
                     {
-                        sql += "";
-                        parameters.Add("");
+                        sql += " AND LastName = @LastName";
+                        parameters.Add("@LastName", lastName);
                     }
 
                     if (!string.IsNullOrEmpty(email))
                     {
-                        sql += "";
-                        parameters.Add("");
+                        sql += " AND Email = @Email";
+                        parameters.Add("@Email", email);
                     }
 
                     var results = await connection.QueryAsync<UserRetrieveDTO>(sql, parameters);

@@ -16,6 +16,7 @@ namespace UsersService.Infrastructure.Messaging
                 var factory = new ConnectionFactory()
                 {
                     HostName = "localhost",
+                    VirtualHost = "/",
                     UserName = "guest",
                     Password = "guest",
                 };
@@ -25,7 +26,7 @@ namespace UsersService.Infrastructure.Messaging
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error connection to RabbitMQ: {ex.Message}");
+                Console.WriteLine($"Connection error on RabbitMQ: {ex.Message}");
                 Console.WriteLine(ex.StackTrace);
                 throw;
             }

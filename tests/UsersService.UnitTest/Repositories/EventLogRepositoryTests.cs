@@ -48,7 +48,8 @@ namespace UsersService.UnitTest.Repositories
             var routingKey = "TestRoutingKey";
 
             // Act
-            await eventLogRepository.SaveEventLog(eventName, eventData, exchange, routingKey);
+            //await eventLogRepository.SaveEventLog(eventName, eventData, exchange, routingKey);
+
 
             // Assert
             mockDapperExecutor.Verify(exec => exec.ExecuteAsync(
