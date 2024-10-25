@@ -11,7 +11,9 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SharedKernel", "src\SharedK
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "UsersService.UnitTest", "tests\UsersService.UnitTest\UsersService.UnitTest.csproj", "{ABE09E80-D05C-49BE-976B-1AB3CFA9431F}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SearchJobsServcie", "src\SearchJobsServcie\SearchJobsServcie.csproj", "{3DC61D32-A2C8-4FB0-8A6A-63FFA947C9CC}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SearchJobsServcie", "src\SearchJobsServcie\SearchJobsServcie.csproj", "{3DC61D32-A2C8-4FB0-8A6A-63FFA947C9CC}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AuthService", "src\AuthService\AuthService.csproj", "{9DA70185-9B2A-4186-90E6-72DAA69094EF}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -39,6 +41,10 @@ Global
 		{3DC61D32-A2C8-4FB0-8A6A-63FFA947C9CC}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{3DC61D32-A2C8-4FB0-8A6A-63FFA947C9CC}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{3DC61D32-A2C8-4FB0-8A6A-63FFA947C9CC}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9DA70185-9B2A-4186-90E6-72DAA69094EF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9DA70185-9B2A-4186-90E6-72DAA69094EF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9DA70185-9B2A-4186-90E6-72DAA69094EF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9DA70185-9B2A-4186-90E6-72DAA69094EF}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

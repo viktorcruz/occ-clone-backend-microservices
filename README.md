@@ -4,12 +4,11 @@ Este proyecto es un prototipo de OCC, consiste en varios microservicios desarrol
 
 El sistema permite gestionar: 
 - usuarios
-- roles
 - publicaciones
+- trabajos
   
 ## Estructura del Prototipo
 ```plaintext
-OrchestrationService
 
 PublicationsService
 ├── Applications
@@ -19,7 +18,7 @@ PublicationsService
 ├── Modules
 └── Persistence
 
-RolesServices
+SearchJobsServices
 ├── Applications
 ├── Controllers
 ├── Domain
@@ -32,6 +31,7 @@ UsersService
 │   ├── Commands
 │   ├── DTO
 │   ├── Queries
+│   ├── Services
 ├── Controllers
 ├── Domain
 │   ├── Core
@@ -45,13 +45,18 @@ UsersService
 │   ├── Injection
 │   ├── Mapper
 │   └── Swagger
-└── Persistence
-    ├── Data
-    └── Interface
+├── Persistence
+|   ├── Data
+|   └── Interface
+└── Saga
+    ├── CompensationActions
+    ├── SagaHandler
+    └── SagaState
 ```
 
 ## Tecnologías Utilizadas
 
 - NET 8.0
+- RabbitMQ
 - Ocelot
 - SQL Server

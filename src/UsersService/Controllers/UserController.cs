@@ -11,7 +11,7 @@ namespace UsersService.Controllers
     [ApiController]
     public class UserController : ControllerBase
     {
-        #region Porperties
+        #region Properties
         private readonly IMediator _mediator;
         private readonly IGlobalExceptionHandler _globalExceptionHandler;
         #endregion

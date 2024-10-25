@@ -1,11 +1,30 @@
-var builder = WebApplication.CreateBuilder(args);
+using PublicationsService.Aplication.Queries;
+using PublicationsService.Modules.Authentication;
+using PublicationsService.Modules.Feature;
+using PublicationsService.Modules.Injection;
+using PublicationsService.Modules.Mapper;
+using PublicationsService.Modules.Swagger;
 
-// Add services to the container.
+var builder = WebApplication.CreateBuilder(args);
+var configurationManager = builder.Configuration;
+var environment = builder.Environment;
+
+builder.Services.AddMediatR(cnf =>
+{
+    cnf.RegisterServicesFromAssembly(typeof(GetPublicationByIdQuery).Assembly);
+});
 
 builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+
+builder.Services.AddCustomMapper(configurationManager);
+builder.Services.AddCustomFeature(configurationManager);
+builder.Services.AddCustomInjection(configurationManager);
+builder.Services.AddCustomAuthentication(configurationManager);
+builder.Services.AddCustomSwagger();
+
 
 var app = builder.Build();
 

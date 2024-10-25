@@ -4,33 +4,31 @@
     <TargetFramework>net8.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <GenerateDocumentationFile>True</GenerateDocumentationFile>
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="AutoMapper" Version="13.0.1" />
+    <PackageReference Include="Dapper" Version="2.1.35" />
+    <PackageReference Include="MediatR" Version="12.2.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.10" />
+    <PackageReference Include="Microsoft.Data.SqlClient" Version="5.2.0" />
+    <PackageReference Include="Microsoft.IdentityModel.Tokens" Version="8.1.2" />
+    <PackageReference Include="NLog" Version="5.3.4" />
+    <PackageReference Include="NLog.Web.AspNetCore" Version="5.3.14" />
+    <PackageReference Include="RabbitMQ.Client" Version="6.8.1" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.4.0" />
+    <PackageReference Include="Swashbuckle.AspNetCore.Swagger" Version="6.9.0" />
+    <PackageReference Include="Swashbuckle.AspNetCore.SwaggerGen" Version="6.9.0" />
+    <PackageReference Include="Swashbuckle.AspNetCore.SwaggerUI" Version="6.9.0" />
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Aplication\Commands\" />
-    <Folder Include="Aplication\Dto\" />
-    <Folder Include="Aplication\Queries\" />
-    <Folder Include="Controllers\" />
-    <Folder Include="Domain\Core\" />
-    <Folder Include="Domain\Entity\" />
-    <Folder Include="Domain\Interface\" />
-    <Folder Include="Infrastructure\Interface\" />
-    <Folder Include="Infrastructure\Repository\" />
-    <Folder Include="Modules\Authentication\" />
-    <Folder Include="Modules\Feature\" />
-    <Folder Include="Modules\Injection\" />
-    <Folder Include="Modules\Mapper\" />
-    <Folder Include="Modules\Swagger\" />
-    <Folder Include="Persistence\Data\" />
-    <Folder Include="Persistence\Interface\" />
-    <Folder Include="SharedKernel\Common\" />
-    <Folder Include="SharedKernel\Helpers\" />
-    <Folder Include="SharedKernel\Interface\" />
-    <Folder Include="SharedKernel\Mapper\" />
+    <Folder Include="Aplication\Services\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\SharedKernel\SharedKernel.csproj" />
   </ItemGroup>
 
 </Project>

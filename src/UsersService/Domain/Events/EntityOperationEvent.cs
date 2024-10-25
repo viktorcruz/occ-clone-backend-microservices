@@ -1,4 +1,5 @@
-﻿using UsersService.Infrastructure.Interface;
+﻿using SharedKernel.Interface;
+using UsersService.Infrastructure.Interface;
 
 namespace UsersService.Domain.Events
 {

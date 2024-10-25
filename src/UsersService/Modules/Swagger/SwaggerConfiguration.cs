@@ -13,7 +13,7 @@ namespace UsersService.Modules.Swagger
                 {
                     Version = "v1",
                     Title = "OCC",
-                    TermsOfService = new Uri("https://wagner.com")
+                    //TermsOfService = new Uri("https://wagner.com")
                 });
 
                 var xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";

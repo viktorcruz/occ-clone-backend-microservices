@@ -13,6 +13,16 @@ BEGIN
 	DROP PROCEDURE [dbo].[Usp_Users_Get]
 END
 GO
+IF OBJECT_ID('[dbo].[Usp_UsersByCredentials_Get]', 'P') IS NOT NULL
+BEGIN
+	DROP PROCEDURE [dbo].[Usp_UsersByCredentials_Get]
+END
+GO
+IF OBJECT_ID('[dbo].[Usp_UsersByEmail_Get]', 'P') IS NOT NULL
+BEGIN
+	DROP PROCEDURE [dbo].[Usp_UsersByEmail_Get]
+END
+GO
 IF OBJECT_ID('[dbo].[Usp_Users_GetAll]','P') IS NOT NULL
 BEGIN
 	DROP PROCEDURE [dbo].[Usp_Users_GetAll]
@@ -28,7 +38,11 @@ BEGIN
 	DROP PROCEDURE [dbo].[Usp_Users_Delete]
 END
 GO
-
+IF OBJECT_ID('[dbo].[Ups_UserPassword_Update]','P') IS NOT NULL
+BEGIN
+	DROP PROCEDURE [dbo].[Ups_UserPassword_Update]
+END
+GO
 
 
 /** INSERT **/
@@ -37,7 +51,8 @@ CREATE OR ALTER PROCEDURE
 		@IdRole INT,
 		@FirstName NVARCHAR(20),
 		@LastName NVARCHAR(20),
-		@Email NVARCHAR(50)
+		@Email NVARCHAR(50),
+		@PasswordHash NVARCHAR(100)
 AS
 BEGIN
 	SET NOCOUNT ON;
@@ -62,8 +77,8 @@ BEGIN
 			ROLLBACK TRANSACTION 
 		END
 		ELSE BEGIN
-			INSERT INTO [dbo].[Users](IdRole, FirstName, LastName, Email, CreationDate)
-			VALUES(@IdRole, @FirstName, @LastName, @Email, GETDATE())
+			INSERT INTO [dbo].[Users](IdRole, FirstName, LastName, Email, PasswordHash, CreationDate)
+			VALUES(@IdRole, @FirstName, @LastName, @Email, @PasswordHash, GETDATE())
 
 			DECLARE @LastId INT = (SELECT SCOPE_IDENTITY())
 
@@ -111,30 +126,31 @@ BEGIN
 			FirstName VARCHAR(20),
 			LastName VARCHAR(20),
 			Email VARCHAR(50),
+			PasswordHash VARCHAR(100),
 			CreationDate DATETIME	
 		)
 
 		BEGIN TRY
 			IF EXISTS( SELECT 1 FROM Users (nolock) WHERE IdUser = @IdUser )
 			BEGIN
-				INSERT INTO @Result(ResultStatus, ResultMessage, OperationType, AffectedRecordId, OperationDateTime, IdUser, IdRole, FirstName, LastName, Email, CreationDate)
-				SELECT 1, 'User found', 'GET', 0, GETDATE(), IdUser, IdRole, FirstName, LastName, Email, CreationDate
+				INSERT INTO @Result(ResultStatus, ResultMessage, OperationType, AffectedRecordId, OperationDateTime, IdUser, IdRole, FirstName, LastName, Email, PasswordHash, CreationDate)
+				SELECT 1, 'User found', 'GET', 0, GETDATE(), IdUser, IdRole, FirstName, LastName, Email, PasswordHash, CreationDate
 				FROM Users (nolock)  
 				WHERE IdUser = @IdUser
 
 			END
 			ELSE
 			BEGIN
-				INSERT INTO @Result(ResultStatus, ResultMessage, OperationType, AffectedRecordId, OperationDateTime, IdUser, IdRole, FirstName, LastName, Email, CreationDate)
-				VALUES(0, 'Error: User not found', 'GET', 0, GETDATE(), NULL, NULL, NULL, NULL, NULL, NULL)
+				INSERT INTO @Result(ResultStatus, ResultMessage, OperationType, AffectedRecordId, OperationDateTime, IdUser, IdRole, FirstName, LastName, Email, PasswordHash, CreationDate)
+				VALUES(0, 'Error: User not found', 'GET', 0, GETDATE(), NULL, NULL, NULL, NULL, NULL, NULL, NULL)
 			END
 		END TRY
 		BEGIN CATCH
 			DECLARE @ErrorMessage NVARCHAR(4000)
 			SET @ErrorMessage = ERROR_MESSAGE()
 
-			INSERT INTO @Result(ResultStatus, ResultMessage, OperationType, AffectedRecordId, OperationDateTime, IdUser, IdRole, FirstName, LastName, Email, CreationDate)
-			VALUES(0, @ErrorMessage, 'GET', 0, GETDATE(), NULL, NULL, NULL, NULL, NULL, NULL)
+			INSERT INTO @Result(ResultStatus, ResultMessage, OperationType, AffectedRecordId, OperationDateTime, IdUser, IdRole, FirstName, LastName, Email, PasswordHash, CreationDate)
+			VALUES(0, @ErrorMessage, 'GET', 0, GETDATE(), NULL, NULL, NULL, NULL, NULL, NULL, NULL)
 		END CATCH
 	
 	SET NOCOUNT OFF;
@@ -143,6 +159,106 @@ BEGIN
 END
 GO
 
+
+/** GET **/
+CREATE OR ALTER PROCEDURE
+	Usp_UsersByCredentials_Get
+		@Email NVARCHAR(50)
+		--@PasswordHash NVARCHAR(100)
+AS
+BEGIN
+	SET NOCOUNT ON;
+		DECLARE @Result AS TABLE
+		(
+			ResultStatus BIT,
+			ResultMessage VARCHAR(100),
+			OperationType VARCHAR(20),
+			AffectedRecordId INT,
+			OperationDateTime DATETIME,
+			IdUser INT,
+			IdRole INT,
+			Email VARCHAR(50),
+			PasswordHash VARCHAR(100),
+			CreationDate DATETIME	
+		)
+
+		BEGIN TRY
+			IF EXISTS( SELECT 1 FROM Users (nolock) WHERE Email = @Email)
+			BEGIN
+				INSERT INTO @Result(ResultStatus, ResultMessage, OperationType, AffectedRecordId, OperationDateTime, IdUser, IdRole, Email, PasswordHash, CreationDate)
+				SELECT 1, 'User found', 'GET', 0, GETDATE(), IdUser, IdRole, Email, PasswordHash, CreationDate
+				FROM Users (nolock)  
+				WHERE Email = @Email 
+
+			END
+			ELSE
+			BEGIN
+				INSERT INTO @Result(ResultStatus, ResultMessage, OperationType, AffectedRecordId, OperationDateTime, IdUser, IdRole, Email, PasswordHash, CreationDate)
+				VALUES(0, 'Error: User not found', 'GET', 0, GETDATE(), NULL, NULL, NULL, NULL, NULL)
+			END
+		END TRY
+		BEGIN CATCH
+			DECLARE @ErrorMessage NVARCHAR(4000)
+			SET @ErrorMessage = ERROR_MESSAGE()
+
+			INSERT INTO @Result(ResultStatus, ResultMessage, OperationType, AffectedRecordId, OperationDateTime, IdUser, IdRole, Email, PasswordHash, CreationDate)
+			VALUES(0, @ErrorMessage, 'GET', 0, GETDATE(), NULL, NULL, NULL, NULL, NULL)
+		END CATCH
+	
+	SET NOCOUNT OFF;
+
+	SELECT * FROM @Result
+END
+GO
+
+/** GET **/
+CREATE OR ALTER PROCEDURE
+	Usp_UsersByEmail_Get
+		@Email NVARCHAR(50)
+AS
+BEGIN
+	SET NOCOUNT ON;
+		DECLARE @Result AS TABLE
+		(
+			ResultStatus BIT,
+			ResultMessage VARCHAR(100),
+			OperationType VARCHAR(20),
+			AffectedRecordId INT,
+			OperationDateTime DATETIME,
+			IdUser INT,
+			Email VARCHAR(50),
+			PasswordHash VARCHAR(100),
+			CreationDate DATETIME	
+		)
+
+		BEGIN TRY
+			IF EXISTS( SELECT 1 FROM Users (nolock) WHERE Email = @Email)
+			BEGIN
+				INSERT INTO @Result(ResultStatus, ResultMessage, OperationType, AffectedRecordId, OperationDateTime, IdUser, Email, PasswordHash, CreationDate)
+				SELECT 1, 'User found', 'GET', 0, GETDATE(), IdUser, Email, PasswordHash, CreationDate
+				FROM Users (nolock)  
+				WHERE Email = @Email 
+
+			END
+			ELSE
+			BEGIN
+				INSERT INTO @Result(ResultStatus, ResultMessage, OperationType, AffectedRecordId, OperationDateTime, IdUser, Email, PasswordHash, CreationDate)
+				VALUES(0, 'Error: User not found', 'GET', 0, GETDATE(), NULL, NULL, NULL, NULL)
+			END
+		END TRY
+		BEGIN CATCH
+			DECLARE @ErrorMessage NVARCHAR(4000)
+			SET @ErrorMessage = ERROR_MESSAGE()
+
+			INSERT INTO @Result(ResultStatus, ResultMessage, OperationType, AffectedRecordId, OperationDateTime, IdUser, Email, PasswordHash, CreationDate)
+			VALUES(0, @ErrorMessage, 'GET', 0, GETDATE(), NULL, NULL, NULL, NULL)
+		END CATCH
+	
+	SET NOCOUNT OFF;
+
+	SELECT * FROM @Result
+END
+GO
 
 /** GET ALL **/
 CREATE OR ALTER PROCEDURE
@@ -162,20 +278,21 @@ BEGIN
 			FirstName VARCHAR(20),
 			LastName VARCHAR(20),
 			Email VARCHAR(50),
+			PasswordHash VARCHAR(100),
 			CreationDate DATETIME
 		)
 
 		BEGIN TRY
-			INSERT INTO @Result(ResultStatus, ResultMessage, OperationType, AffectedRecordId, OperationDateTime, IdUser, IdRole, FirstName, LastName, Email, CreationDate )
-			SELECT 1, 'User found', 'GET ALL', 0, GETDATE(), IdUser, IdRole, FirstName, LastName, Email, CreationDate
+			INSERT INTO @Result(ResultStatus, ResultMessage, OperationType, AffectedRecordId, OperationDateTime, IdUser, IdRole, FirstName, LastName, Email, PasswordHash, CreationDate )
+			SELECT 1, 'User found', 'GET ALL', 0, GETDATE(), IdUser, IdRole, FirstName, LastName, Email, PasswordHash, CreationDate
 			FROM Users
 		END TRY
 		BEGIN CATCH
 			DECLARE @ErrorMessage NVARCHAR(4000)
 			SET @ErrorMessage = ERROR_MESSAGE()
 
-			INSERT INTO @Result(ResultStatus, ResultMessage, OperationType, AffectedRecordId, OperationDateTime, IdUser, IdRole, FirstName, LastName, Email, CreationDate )
-			VALUES(0, @ErrorMessage, 'GET ALL', 0, GETDATE(), NULL, NULL, NULL, NULL, NULL, NULL)
+			INSERT INTO @Result(ResultStatus, ResultMessage, OperationType, AffectedRecordId, OperationDateTime, IdUser, IdRole, FirstName, LastName, Email, PasswordHash, CreationDate )
+			VALUES(0, @ErrorMessage, 'GET ALL', 0, GETDATE(), NULL, NULL, NULL, NULL, NULL, NULL, NULL)
 		END CATCH
 	
 	SET NOCOUNT OFF;
@@ -213,7 +330,7 @@ BEGIN
 		IF NOT EXISTS(SELECT 1 FROM [dbo].[Users] WHERE IdUser = @IdUser)
 		BEGIN
 			INSERT INTO @Result(ResultStatus, ResultMessage, OperationType, AffectedRecordId, OperationDateTime)
-			SELECT 0, 'Error: caterory not found', 'NONE', NULL, GETDATE()
+			SELECT 0, 'Error: user not found', 'NONE', NULL, GETDATE()
 
 			ROLLBACK TRANSACTION TrnxUpCategories
 		END
@@ -276,7 +393,7 @@ BEGIN
 		IF NOT EXISTS(SELECT 1 FROM [dbo].[Users] WHERE IdUser = @IdUser)
 		BEGIN
 			INSERT INTO @Result(ResultStatus, ResultMessage, OperationType, AffectedRecordId, OperationDateTime)
-			SELECT 0, 'Error: caterory not found', 'NONE', NULL, GETDATE()
+			SELECT 0, 'Error: user not found', 'NONE', NULL, GETDATE()
 
 			ROLLBACK TRANSACTION TrnxUpCategories
 		END
@@ -312,6 +429,62 @@ BEGIN
 END
 GO
 
+/** UPDATE PASSWORD **/
+CREATE OR ALTER PROCEDURE
+	Usp_UserPassword_Update
+		--@IdUser INT,
+		@Email NVARCHAR(50),
+		@PasswordHash NVARCHAR(100)
+AS
+BEGIN
+	SET NOCOUNT ON;
+	DECLARE @Result AS TABLE
+	(
+		ResultStatus BIT,
+		ResultMessage VARCHAR(100),
+		OperationType VARCHAR(20),
+		AffectedRecordId INT,
+		OperationDateTime DATETIME
+	)
+	BEGIN TRY
+		BEGIN TRANSACTION TrnxUpCategories
+
+		IF NOT EXISTS(SELECT 1 FROM [dbo].[Users] WHERE Email = @Email)
+		BEGIN
+			INSERT INTO @Result(ResultStatus, ResultMessage, OperationType, AffectedRecordId, OperationDateTime)
+			SELECT 0, 'Error: user not found', 'NONE', NULL, GETDATE()
+
+			ROLLBACK TRANSACTION TrnxUpCategories
+		END
+		ELSE BEGIN
+			UPDATE Users
+				SET 
+					PasswordHash = @PasswordHash
+			WHERE Email = @Email 
+			DECLARE @LastId INT = (SELECT SCOPE_IDENTITY())
+			INSERT INTO @Result(ResultStatus, ResultMessage, OperationType, AffectedRecordId, OperationDateTime)
+			VALUES (1, 'Data has been sucessfully updated', 'UPDATE', @LastId, GETDATE())
+
+			COMMIT TRANSACTION TrnxUpCategories
+		END
+	END TRY
+	
+	
+	BEGIN CATCH
+		IF @@TRANCOUNT > 0
+		BEGIN
+			ROLLBACK TRANSACTION TrnUpdating
+		END
+
+		INSERT INTO @Result(ResultStatus, ResultMessage, OperationType, AffectedRecordId, OperationDateTime)
+		VALUES(0, ERROR_MESSAGE(), 'ERROR', 0, GETDATE())
+
+	END CATCH
+	SET NOCOUNT OFF;
+	
+	SELECT * FROM @Result
+END
+GO
 
 /** DELETE **/
 CREATE OR ALTER PROCEDURE
@@ -365,16 +538,3 @@ BEGIN
 
 	SELECT * FROM @Result
 END
-
-/**
-
-EXEC Usp_Users_Add @Name = 'User 1'
-EXEC Ups_Users_Update @CategoryId = 1, @Name = 'User 2'
-EXEC Usp_Users_Get @IdUser = 4
-EXEC Usp_Users_GetAll
-EXEC Usp_Users_Delete @IdUser = 3
-
-
-INSERT INTO Roles(RoleName) VALUES('Recuiter'), ('Applicant')
-
-**/

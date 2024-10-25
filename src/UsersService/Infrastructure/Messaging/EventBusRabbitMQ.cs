@@ -1,6 +1,7 @@
 ﻿using Dapper;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
+using SharedKernel.Interface;
 using System.Text;
 using System.Text.Json;
 using UsersService.Infrastructure.Interface;

@@ -1,7 +1,9 @@
 using FluentValidation.AspNetCore;
 using UsersService.Application.Queries;
-using UsersService.Modules.Authentication;
-using UsersService.Modules.Feature;
+//using UsersService.Modules.Authentication;
+//using UsersService.Modules.Feature;
+using SharedKernel.Modules.Authentication;
+using SharedKernel.Modules.Feature;
 using UsersService.Modules.Injection;
 using UsersService.Modules.Mapper;
 using UsersService.Modules.Swagger;
