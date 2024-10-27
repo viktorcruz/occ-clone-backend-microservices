@@ -16,24 +16,16 @@ namespace AuthService.Modules.Injection
     {
         public static IServiceCollection AddCustomInjection(this IServiceCollection services, IConfiguration configuration)
         {
-            // Registrar la conexión a la base de datos como Scoped si se utiliza en un contexto de solicitud
             services.AddScoped<IDbConnectionFactory, DbConnectionFactory>();
 
-            // Adaptadores
-            //services.AddScoped<IRegisterCommandHandler, RegisterAdapter>();
-
-            // Registrar casos de uso
             services.AddScoped<ILoginUseCase, LoginUseCase>();
             services.AddScoped<IRegisterUseCase, RegisterUseCase>();
             services.AddScoped<IRenewTokenUseCase, RenewTokenUseCase>();
 
-            // Registrar los puertos necesarios para los casos de uso
             services.AddScoped<ILoginPort, LoginAdapter>();
             services.AddScoped<IRegisterPort, RegisterAdapter>();
             services.AddScoped<IRenewTokenPort, RenewTokenAdapter>();
 
-            // Otros servicios
-            //services.AddScoped<PasswordHasher>();
             services.AddScoped<IUserRepository, UserRepository>();
             services.AddScoped<IRoleRepository, RoleRepository>();
             services.AddScoped<IRegisterRepository, RegisterRepository>();

@@ -1,9 +1,9 @@
 using PublicationsService.Aplication.Queries;
-using PublicationsService.Modules.Authentication;
-using PublicationsService.Modules.Feature;
 using PublicationsService.Modules.Injection;
 using PublicationsService.Modules.Mapper;
-using PublicationsService.Modules.Swagger;
+using SharedKernel.Modules.Authentication;
+using SharedKernel.Modules.Feature;
+using SharedKernel.Modules.Swagger;
 
 var builder = WebApplication.CreateBuilder(args);
 var configurationManager = builder.Configuration;

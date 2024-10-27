@@ -1,12 +1,10 @@
 using FluentValidation.AspNetCore;
 using UsersService.Application.Queries;
-//using UsersService.Modules.Authentication;
-//using UsersService.Modules.Feature;
 using SharedKernel.Modules.Authentication;
 using SharedKernel.Modules.Feature;
 using UsersService.Modules.Injection;
 using UsersService.Modules.Mapper;
-using UsersService.Modules.Swagger;
+using SharedKernel.Modules.Swagger;
 
 var builder = WebApplication.CreateBuilder(args);
 var configurationManager = builder.Configuration;
@@ -41,9 +39,14 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
-
+app.UseAuthentication();
 app.UseAuthorization();
-
+app.UseSwagger();
+app.UseSwaggerUI(c =>
+{
+    c.SwaggerEndpoint("/swagger/v1/swagger.json", "OCC API V1");
+    c.RoutePrefix = string.Empty;
+});
 app.MapControllers();
 
 app.Run();

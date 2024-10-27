@@ -1,4 +1,5 @@
 ﻿using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SharedKernel.Interface;
 using UsersService.Application.Commands;
@@ -7,6 +8,7 @@ using UsersService.Application.Queries;
 
 namespace UsersService.Controllers
 {
+    [Authorize]
     [Route("api/[controller]")]
     [ApiController]
     public class UserController : ControllerBase

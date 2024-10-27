@@ -1,4 +1,5 @@
 ﻿using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PublicationsService.Aplication.Commands;
 using PublicationsService.Aplication.Dto;
@@ -6,6 +7,7 @@ using SharedKernel.Interface;
 
 namespace PublicationsService.Controllers
 {
+    [Authorize]
     [Route("api/[controller]")]
     [ApiController]
     public class PublicationController : ControllerBase

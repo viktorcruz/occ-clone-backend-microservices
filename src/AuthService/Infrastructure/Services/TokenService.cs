@@ -43,7 +43,7 @@ namespace AuthService.Infrastructure.Services
 
             var token = new JwtSecurityToken(
                 issuer: "OCC-DEMO", 
-                audience: "your-audience", 
+                audience: "alphaCode", 
                 claims: claims, 
                 expires: expiration, 
                 signingCredentials: creds 
