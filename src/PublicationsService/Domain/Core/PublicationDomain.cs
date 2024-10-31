@@ -1,5 +1,8 @@
-﻿using PublicationsService.Aplication.Dto;
+﻿using PublicationsService.Aplication.Commands;
+using PublicationsService.Aplication.Dto;
+using PublicationsService.Application.Dto;
 using PublicationsService.Domain.Interface;
+using PublicationsService.Infrastructure.Interface;
 using SharedKernel.Common.Responses;
 
 namespace PublicationsService.Domain.Core
@@ -7,40 +10,45 @@ namespace PublicationsService.Domain.Core
     public class PublicationDomain : IPublicationDomain
     {
         #region Properties
-
+        public readonly IPublicationRepository _publicationRepository;
         #endregion
 
         #region Constructor
-        public PublicationDomain()
+        public PublicationDomain(IPublicationRepository publicationRepository)
         {
-            
+            _publicationRepository = publicationRepository;
         }
+
         #endregion
 
         #region Methods
-        public Task<DatabaseResult> CreatePublishAsync(PublicationDTO publicationDTO)
+        public async Task<DatabaseResult> CreatePublicationAsync(CreatePublicationCommand command)
         {
-            throw new NotImplementedException();
+            return await _publicationRepository.CreatePublicationAsync(command);
         }
 
-        public Task<RetrieveDatabaseResult<PublicationRetrieveDTO>> GetPublicationByIdAsync(int publicationId)
+        public async Task<RetrieveDatabaseResult<PublicationRetrieveDTO>> GetPublicationByIdAsync(int publicationId)
         {
-            throw new NotImplementedException();
+            return await _publicationRepository.GetPublicationByIdAsync(publicationId);
         }
 
-        public Task<RetrieveDatabaseResult<List<PublicationRetrieveDTO>>> GetAllPublicationAsync()
+        public async Task<RetrieveDatabaseResult<List<PublicationRetrieveDTO>>> GetAllPublicationAsync()
         {
-            throw new NotImplementedException();
+            return await _publicationRepository.GetAllPublicationAsync();
         }
 
+        //public async Task<RetrieveDatabaseResult<List<PublicationRetrieveDTO>>> SearchPublicationAsync(string email)
+        //{
+        //    return await _publicationRepository.SearchPublicationAsync(email);
+        //}
 
-        public Task<DatabaseResult> UpdatePublicationAsync(PublicationDTO publicationDTO)
+        public async Task<DatabaseResult> UpdatePublicationAsync(PublicationUpdateDTO publicationDTO)
         {
-            throw new NotImplementedException();
+            return await _publicationRepository.UpdatePublicationAsync(publicationDTO);
         }
-        public Task<DatabaseResult> DeletePublicationByIdAsync(int publicationId)
+        public async Task<DatabaseResult> DeletePublicationByIdAsync(int publicationId)
         {
-            throw new NotImplementedException();
+            return await _publicationRepository.DeletePublicationByIdAsync(publicationId);
         }
         #endregion
     }

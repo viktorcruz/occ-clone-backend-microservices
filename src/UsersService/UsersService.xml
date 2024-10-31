@@ -1,0 +1,13 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>UsersService</name>
+    </assembly>
+    <members>
+        <member name="T:UsersService.Application.Commands.DeactivateUserCommand">
+            <summary>
+            Se usa para desactivar o eliminar un usuario, lo que es mas especifico que un simple delete
+            </summary>
+        </member>
+    </members>
+</doc>

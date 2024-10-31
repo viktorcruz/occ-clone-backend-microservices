@@ -15,6 +15,15 @@ BEGIN
 	ALTER TABLE [dbo].[Publications] DROP CONSTRAINT IF EXISTS [FK_Publications_Users]
 	ALTER TABLE [dbo].[Publications] DROP CONSTRAINT IF EXISTS [FK_Publications_Roles]
 END
+IF EXISTS(SELECT 1 FROM SYS.OBJECTS WHERE OBJECT_ID = OBJECT_ID(N'[dbo].[Jobs]'))
+BEGIN
+	ALTER TABLE [dbo].[Jobs] DROP CONSTRAINT IF EXISTS [FK_Jobs_JobsTypes]
+END
+IF EXISTS(SELECT 1 FROM SYS.OBJECTS WHERE OBJECT_ID = OBJECT_ID(N'[dbo].[SearchJobs]'))
+BEGIN 
+	ALTER TABLE [dbo].[SearchJobs] DROP CONSTRAINT IF EXISTS [FK_SearchJobs_JobTypes]
+	ALTER TABLE [dbo].[SearchJobs] DROP CONSTRAINT IF EXISTS [FK_SearchJobs_Users]
+END
 IF EXISTS(SELECT 1 FROM SYS.OBJECTS WHERE OBJECT_ID= OBJECT_ID(N'[dbo].[RefreshTokens]'))
 BEGIN
 	ALTER TABLE [dbo].[RefreshTokens] DROP CONSTRAINT IF EXISTS [FK_RefreshTokens_Users]
@@ -33,6 +42,18 @@ END
 IF EXISTS(SELECT 1 FROM SYS.OBJECTS WHERE OBJECT_ID = OBJECT_ID(N'[dbo].[Publications]'))
 BEGIN 
 	DROP TABLE [dbo].[Publications]
+END
+IF EXISTS(SELECT 1 FROM SYS.OBJECTS WHERE OBJECT_ID = OBJECT_ID(N'[dbo].[Jobs]'))
+BEGIN
+	DROP TABLE [dbo].[Jobs]
+END
+IF EXISTS(SELECT 1 FROM SYS.OBJECTS WHERE OBJECT_ID = OBJECT_ID(N'[dbo].[JobTypes]'))
+BEGIN
+	DROP TABLE [dbo].[JobTypes]
+END
+IF EXISTS(SELECT 1 FROM SYS.OBJECTS WHERE OBJECT_ID = OBJECT_ID(N'[dbo].[SearchJobs]'))
+BEGIN
+	DROP TABLE [dbo].[SearchJobs]
 END
 IF EXISTS(SELECT 1 FROM SYS.OBJECTS WHERE OBJECT_ID = OBJECT_ID(N'[dbo].[Roles]'))
 BEGIN
@@ -92,45 +113,84 @@ ALTER TABLE RefreshTokens
 
 CREATE TABLE Publications
 (
-	idPublication INT IDENTITY(1,1) PRIMARY KEY CLUSTERED,
-	idRecruiter INT NOT NULL,
-	Title NVARCHAR(20) NOT NULL,
-	Description NVARCHAR(100),
-	PublicationDate DATETIME NOT NULL,
+	IdPublication INT IDENTITY(1,1) PRIMARY KEY CLUSTERED,
+	IdUser INT NOT NULL,
 	IdRole INT NOT NULL,
-	Status BIT NOT NULL,
-	ExpirationDate DATETIME NOT NULL
+	Title NVARCHAR(100) NOT NULL,
+	Description NVARCHAR(MAX),
+	PublicationDate DATETIME NOT NULL,
+	ExpirationDate DATETIME NOT NULL,
+	Status TINYINT NOT NULL,
+	Salary DECIMAL(10, 2) NULL,
+	Location NVARCHAR(100) NULL,
+	Company NVARCHAR(100) NULL,
 )
 
 ALTER TABLE Publications
 	WITH CHECK ADD CONSTRAINT [FK_Publications_Users]
-	FOREIGN KEY([idRecruiter]) REFERENCES Users([IdUser])
+	FOREIGN KEY([IdUser]) REFERENCES Users([IdUser])
 ALTER TABLE Publications
 	WITH CHECK ADD CONSTRAINT [FK_Publications_Roles]
 	FOREIGN KEY([IdRole]) REFERENCES Roles([IdRole])
 
 CREATE TABLE SelectionProcess
 (
-	idSelectionProcess INT IDENTITY(1,1) PRIMARY KEY CLUSTERED,
-	idPublication INT NOT NULL,
-	idApplicant INT NOT NULL,
+	IdSelectionProcess INT IDENTITY(1,1) PRIMARY KEY CLUSTERED,
+	IdPublication INT NOT NULL,
+	IdApplicant INT NOT NULL,
 	Status NVARCHAR(20) NOT NULL,
 	ApplicationDate DATETIME NOT NULL
 )
 
 ALTER TABLE SelectionProcess
 	WITH CHECK ADD CONSTRAINT [FK_SelectionProcess_Publications]
-	FOREIGN KEY([idPublication]) REFERENCES Publications([idPublication])
+	FOREIGN KEY([IdPublication]) REFERENCES Publications([IdPublication])
 ALTER TABLE SelectionProcess
 	WITH CHECK ADD CONSTRAINT [FK_SelectionProcess_Users]
-	FOREIGN KEY([idApplicant]) REFERENCES Users([IdUser])
+	FOREIGN KEY([IdApplicant]) REFERENCES Users([IdUser])
 	   
 
+CREATE TABLE JobTypes
+(
+	IdJobType INT IDENTITY(1,1) PRIMARY KEY CLUSTERED,
+	JobTypeName NVARCHAR(50) NOT NULL
+)
+
+CREATE TABLE Jobs
+(
+	IdJob INT IDENTITY(1,1) PRIMARY KEY CLUSTERED,
+	JobTile NVARCHAR(100) NOT NULL,
+	JobDescription NVARCHAR(MAX) NULL,
+	IdJobType INT NOT NULL
+)
+
+ALTER TABLE Jobs
+	WITH CHECK ADD CONSTRAINT [FK_Jobs_JobsTypes]
+	FOREIGN KEY([IdJobType]) REFERENCES JobTypes([IdJobType])
+
+CREATE TABLE SearchJobs
+(
+	IdSearch INT IDENTITY(1,1) PRIMARY KEY CLUSTERED,
+	IdUser INT NOT NULL,
+	IdJobType INT NULL,
+	SearchQuery NVARCHAR(255) NOT NULL,
+	SearchDate DATETIME NOT NULL DEFAULT GETDATE(),
+	Location NVARCHAR(100) NULL,
+	MinSalary DECIMAL(10,2) NULL,
+	MaxSalary DECIMAL(10,2) NULL,
+)
+
+ALTER TABLE SearchJobs
+	WITH CHECK ADD CONSTRAINT [FK_SearchJobs_JobTypes]
+	FOREIGN KEY([IdJobType]) REFERENCES JobTypes([IdJobType])
+ALTER TABLE SearchJobs
+	WITH CHECK ADD CONSTRAINT [FK_SearchJobs_Users]
+	FOREIGN KEY([IdUser]) REFERENCES Users([IdUser])
 
 INSERT INTO Roles(RoleName) VALUES('Recruiter'),('Applicant')
 
---INSERT INTO Users(IdRole, FirstName, LastName, Email, PasswordHash, CreationDate, IsActive, IsRegistrationConfirmed, RegistrationConfirmedAt)
---VALUES	(2,'Maxx','Winter','the.maxx@fake.com','12341234',GETDATE(),0,0, GETDATE())
+INSERT INTO Users(IdRole, FirstName, LastName, Email, PasswordHash, CreationDate, IsActive, IsRegistrationConfirmed, RegistrationConfirmedAt)
+VALUES	(1,'Alice','Liddel','alice@fake.com','12341234',GETDATE(),0,0, GETDATE())
 		--(1,'Karla','Fuentes Nolasco','karla.fuente@fake.com','12341234',GETDATE(),0,0, GETDATE()),
 		--(1,'Oscar','Kala Haak','oscar.kala@fake.com','12341234',GETDATE(),0,0, GETDATE()),
 		--(1,'Maria','Torres','maria.torres@fake.com','12341234',GETDATE(),0,0, GETDATE()),

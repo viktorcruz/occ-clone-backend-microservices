@@ -1,10 +1,10 @@
 using FluentValidation.AspNetCore;
 using UsersService.Application.Queries;
-using SharedKernel.Modules.Authentication;
 using SharedKernel.Modules.Feature;
 using UsersService.Modules.Injection;
 using UsersService.Modules.Mapper;
-using SharedKernel.Modules.Swagger;
+using UsersService.Modules.Swagger;
+using UsersService.Modules.Authentication;
 
 var builder = WebApplication.CreateBuilder(args);
 var configurationManager = builder.Configuration;
@@ -28,7 +28,6 @@ builder.Services.AddCustomFeature(configurationManager);
 builder.Services.AddCustomInjection(configurationManager);
 builder.Services.AddCustomAuthentication(configurationManager);
 builder.Services.AddCustomSwagger();
-
 
 var app = builder.Build();
 

@@ -5,17 +5,18 @@ namespace PublicationsService.Modules.Mapper
 {
     public static class MapperConfiguration
     {
-        public static IServiceCollection AddCustomMapper(this IServiceCollection services, IConfiguration configuration)
+        public static IServiceCollection AddCustomMapper(this IServiceCollection serviceCollection)
         {
-            var mapping = new AutoMapper.MapperConfiguration(cnf =>
+            var mapping = new AutoMapper.MapperConfiguration(config =>
             {
-                cnf.AddProfile(new MappingProfile());
+                config.AddProfile(new MappingProfile());
             });
 
             IMapper mapper = mapping.CreateMapper();
-            services.AddSingleton(mapper);
 
-            return services;
+            serviceCollection.AddSingleton(mapper);
+
+            return serviceCollection;
         }
     }
 }

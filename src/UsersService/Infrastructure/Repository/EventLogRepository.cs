@@ -16,12 +16,12 @@ namespace UsersService.Infrastructure.Repository
         public EventLogRepository(
             IDbConnectionFactory connectionFactory,
             IGlobalExceptionHandler globalExceptionHandler,
-            IDapperExecutor dapperExecutor)
+            IDapperExecutor dapperExecutor
+        )
         {
             _connectionFactory = connectionFactory;
             _globalExceptionHandler = globalExceptionHandler;
             _dapperExecutor = dapperExecutor;
-
         }
 
         public async Task SaveEventLog(string query, DynamicParameters parameters)
@@ -39,13 +39,16 @@ namespace UsersService.Infrastructure.Repository
                             parameters,
                             transaction: transaction,
                             commandType: CommandType.StoredProcedure
-                            );
+                        );
                         transaction.Commit();
                     }
                     catch (Exception ex)
                     {
                         transaction.Rollback();
-                        _globalExceptionHandler.HandleGenericException<string>(ex, "EventLogsRepository");
+                        _globalExceptionHandler.HandleGenericException<string>(
+                            ex,
+                            "EventLogsRepository"
+                        );
                     }
                 }
             }

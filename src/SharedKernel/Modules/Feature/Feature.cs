@@ -14,7 +14,7 @@ namespace SharedKernel.Modules.Feature
                     builder => builder.AllowAnyHeader()
                     .AllowAnyMethod()
                     .AllowCredentials()
-                    .WithOrigins(configuration["Jwt:OriginsCors"])));
+                    .WithOrigins(configuration["Jwt:OriginCors"])));
 
             return services;
         }

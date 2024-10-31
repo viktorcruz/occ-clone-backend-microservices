@@ -10,34 +10,31 @@ namespace PublicationsService.Infrastructure.Messaging
 {
     public class EventBusRabbitMQ : IEventBus
     {
-        #region Properties
         private readonly IModel _channel;
         private readonly ILogger<EventBusRabbitMQ> _logger;
         private readonly IEventLogRepository _eventLogRepository;
-        #endregion
 
-        #region Constructor
         public EventBusRabbitMQ(
             RabbitMQConnection connection,
             ILogger<EventBusRabbitMQ> logger,
-            IEventLogRepository eventLogRepository
-            )
+            IEventLogRepository eventLogRepository)
         {
             _channel = connection.GetChannel();
             _logger = logger;
             _eventLogRepository = eventLogRepository;
         }
-        #endregion
 
-        #region Methods
+
         public void Publish<T>(string exchange, string routingKey, T @event)
         {
             var message = JsonSerializer.Serialize(@event);
             var body = Encoding.UTF8.GetBytes(message);
 
+            // TODO: declare the exchange and  publish the message
             _channel.ExchangeDeclare(exchange, "direct", durable: true);
             _channel.BasicPublish(exchange, routingKey, null, body);
 
+            // TODO: save the log of the published event in the db
             var parameters = new DynamicParameters();
             parameters.Add("@EventName", "Publish");
             parameters.Add("@EventData", message);
@@ -49,9 +46,10 @@ namespace PublicationsService.Infrastructure.Messaging
             _logger.LogInformation($"Published event: {message}");
         }
 
+
         public void Subscribe<T>(string exchange, string routingKey, Func<T, Task> handler)
         {
-            _channel.QueueDeclare(routingKey, durable: true, exclusive: false, autoDelete: false, arguments: null);
+            _channel.QueueDeclare(routingKey, durable: false, exclusive: false, autoDelete: false, arguments: null);
             _channel.QueueBind(routingKey, exchange, routingKey);
 
             var consumer = new EventingBasicConsumer(_channel);
@@ -66,6 +64,5 @@ namespace PublicationsService.Infrastructure.Messaging
 
             _channel.BasicConsume(queue: routingKey, autoAck: true, consumer: consumer);
         }
-        #endregion
     }
 }

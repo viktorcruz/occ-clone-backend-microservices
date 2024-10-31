@@ -1,8 +1,11 @@
 //using AuthService.Modules.Authentication;
 //using AuthService.Modules.Feature;
 //using AuthService.Modules.Swagger;
+//using AuthService.Modules.Authentication;
 using AuthService.Modules.Injection;
 using SharedKernel.Modules.Authentication;
+
+//using SharedKernel.Modules.Authentication;
 using SharedKernel.Modules.Feature;
 using SharedKernel.Modules.Swagger;
 

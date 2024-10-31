@@ -7,7 +7,28 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Versioning" Version="5.1.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Versioning.ApiExplorer" Version="5.1.0" />
+    <PackageReference Include="RabbitMQ.Client" Version="6.8.1" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.4.0" />
+    <PackageReference Include="AutoMapper" Version="13.0.1" />
+    <PackageReference Include="Dapper" Version="2.1.35" />
+    <PackageReference Include="FluentValidation.AspNetCore" Version="11.3.0" />
+    <PackageReference Include="MediatR" Version="12.2.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.10" />
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.NewtonsoftJson" Version="8.0.2" />
+    <PackageReference Include="Microsoft.Data.SqlClient" Version="5.2.0" />
+    <PackageReference Include="Microsoft.Data.SqlClient.SNI.runtime" Version="5.2.0" />
+    <PackageReference Include="Microsoft.Extensions.Configuration" Version="8.0.0" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="8.0.1" />
+    <PackageReference Include="Microsoft.VisualStudio.Web.CodeGeneration.Design" Version="8.0.1" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+    <PackageReference Include="NLog" Version="5.2.8" />
+    <PackageReference Include="NLog.Database" Version="5.2.8" />
+    <PackageReference Include="NLog.Schema" Version="5.2.8" />
+    <PackageReference Include="Swashbuckle.AspNetCore.Swagger" Version="6.9.0" />
+    <PackageReference Include="Swashbuckle.AspNetCore.SwaggerGen" Version="6.9.0" />
+    <PackageReference Include="Swashbuckle.AspNetCore.SwaggerUI" Version="6.9.0" />
   </ItemGroup>
 
   <ItemGroup>
@@ -19,15 +40,11 @@
     <Folder Include="Infrastructure\Interface\" />
     <Folder Include="Infrastructure\Messaging\" />
     <Folder Include="Infrastructure\Repository\" />
-    <Folder Include="Modules\Authentication\" />
-    <Folder Include="Modules\Feature\" />
-    <Folder Include="Modules\Injection\" />
-    <Folder Include="Modules\Mapper\" />
-    <Folder Include="Modules\Swagger\" />
-    <Folder Include="Persistence\Data\" />
-    <Folder Include="Persistence\Interface\" />
     <Folder Include="Saga\" />
-    <Folder Include="SharedKernel\Mapper\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\SharedKernel\SharedKernel.csproj" />
   </ItemGroup>
 
 </Project>

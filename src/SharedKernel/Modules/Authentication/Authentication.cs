@@ -16,7 +16,7 @@ namespace SharedKernel.Modules.Authentication
 
             var appSettings = appSettingsSection.Get<AppSettings>();
             var key = Encoding.ASCII.GetBytes(appSettings.Secret);
-            var issue = appSettings.Issuer;
+            var issuer = appSettings.Issuer;
             var audience = appSettings.Audience;
 
             services.AddAuthentication(cnf =>
@@ -39,14 +39,14 @@ namespace SharedKernel.Modules.Authentication
                     };
                     cnf.TokenValidationParameters = new TokenValidationParameters
                     {
-                        ValidateIssuerSigningKey = true,
-                        IssuerSigningKey = new SymmetricSecurityKey(key),
                         ValidateIssuer = true,
-                        ValidIssuer = issue,
                         ValidateAudience = true,
-                        ValidAudience = audience,
                         ValidateLifetime = true,
-                        ClockSkew = TimeSpan.Zero,
+                        ValidateIssuerSigningKey = true,
+                        ValidIssuer = issuer,
+                        ValidAudience = audience,
+                        IssuerSigningKey = new SymmetricSecurityKey(key),
+                        ClockSkew = TimeSpan.Zero
                     };
                 });
             return services;

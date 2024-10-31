@@ -1,9 +1,12 @@
-﻿using PublicationsService.Domain.Core;
+﻿using FluentValidation;
+using PublicationsService.Application.Commands.Validators;
+using PublicationsService.Domain.Core;
 using PublicationsService.Domain.Events;
 using PublicationsService.Domain.Interface;
 using PublicationsService.Infrastructure.Interface;
 using PublicationsService.Infrastructure.Messaging;
 using PublicationsService.Infrastructure.Repository;
+using PublicationsService.Infrastructure.Repository.UsersService.Infrastructure.Repository;
 using PublicationsService.Persistence.Data;
 using PublicationsService.Persistence.Interface;
 using SharedKernel.Common;
@@ -21,7 +24,9 @@ namespace PublicationsService.Modules.Injection
             services.AddSingleton<RabbitMQConnection>();
             services.AddSingleton<EventBusRabbitMQ>();
             services.AddSingleton<IEventBus, EventBusRabbitMQ>();
+
             services.AddTransient<EntityOperationEvent>();
+            services.AddTransient<IEntityOperationEventFactory, EntityOperationEventFactory>();
             services.AddSingleton<IDapperExecutor, DapperExecutor>();
             services.AddSingleton<IEventLogRepository, EventLogRepository>();
             services.AddTransient<IPublicationDomain, PublicationDomain>();
@@ -30,6 +35,8 @@ namespace PublicationsService.Modules.Injection
             services.AddSingleton<IGlobalExceptionHandler, GlobalExceptionHandler>();
             services.AddTransient(typeof(IEndpointResponse<>), typeof(EndpointResponse<>));
             services.AddTransient<IDatabaseResult, DatabaseResult>();
+
+            services.AddValidatorsFromAssemblyContaining<CreatePublicationCommandValidator>();
 
             return services;
         }

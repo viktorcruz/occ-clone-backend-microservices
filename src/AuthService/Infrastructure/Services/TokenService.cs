@@ -12,6 +12,8 @@ namespace AuthService.Infrastructure.Services
     {
         #region Properties
         private readonly string _secretKey;
+        private readonly string _issuer;
+        private readonly string _audience;
         private readonly string _expirationMinutes;
         #endregion
 
@@ -20,6 +22,8 @@ namespace AuthService.Infrastructure.Services
         {
             _secretKey = configuration["Jwt:Secret"];
             _expirationMinutes = configuration["Jwt:ExpirationMinutes"];
+            _issuer = configuration["JWT:Issuer"];
+            _audience = configuration["JWT:Audience"];
         }
         #endregion
 
@@ -42,8 +46,8 @@ namespace AuthService.Infrastructure.Services
             var expiration = DateTime.UtcNow.AddHours(1);
 
             var token = new JwtSecurityToken(
-                issuer: "OCC-DEMO", 
-                audience: "alphaCode", 
+                issuer: _issuer, 
+                audience: _audience, 
                 claims: claims, 
                 expires: expiration, 
                 signingCredentials: creds 
@@ -90,7 +94,7 @@ namespace AuthService.Infrastructure.Services
             var tokenDescriptor = new SecurityTokenDescriptor
             {
                 Subject = new ClaimsIdentity(claims),
-                Expires = DateTime.UtcNow.AddDays(30), 
+                Expires = DateTime.UtcNow.AddDays(1), 
                 SigningCredentials = creds
             };
 

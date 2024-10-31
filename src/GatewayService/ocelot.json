@@ -2,7 +2,7 @@
   "Routes": [
     {
       "DownstreamPathTemplate": "/api/user/{everything}",
-      "DownstreamScheme": "http",
+      "DownstreamScheme": "https",
       "DownstreamHostAndPorts": [
         {
           "Host": "localhost",
@@ -10,14 +10,19 @@
         }
       ],
       "UpstreamPathTemplate": "/user/{everything}",
-      "UpstreamHttpMethod": [ "GET", "POST", "PUT", "DELETE" ],
+      "UpstreamHttpMethod": [
+        "GET",
+        "POST",
+        "PUT",
+        "DELETE"
+      ],
       "AuthenticationOptions": {
         "AuthenticationProviderKey": "Bearer"
       }
     },
     {
       "DownstreamPathTemplate": "/api/publication/{everything}",
-      "DownstreamScheme": "http",
+      "DownstreamScheme": "https",
       "DownstreamHostAndPorts": [
         {
           "Host": "localhost",
@@ -25,14 +30,19 @@
         }
       ],
       "UpstreamPathTemplate": "/publication/{everything}",
-      "UpstreamHttpMethod": [ "GET", "POST", "PUT", "DELETE" ],
+      "UpstreamHttpMethod": [
+        "GET",
+        "POST",
+        "PUT",
+        "DELETE"
+      ],
       "AuthenticationOptions": {
         "AuthenticationProviderKey": "Bearer"
       }
     },
     {
       "DownstreamPathTemplate": "/api/searchjobs/{everything}",
-      "DownstreamScheme": "http",
+      "DownstreamScheme": "https",
       "DownstreamHostAndPorts": [
         {
           "Host": "localhost",
@@ -40,13 +50,26 @@
         }
       ],
       "UpstreamPathTemplate": "/searchjobs/{everything}",
-      "UpstreamHttpMethod": [ "GET", "POST", "PUT", "DELETE" ],
+      "UpstreamHttpMethod": [
+        "GET",
+        "POST",
+        "PUT",
+        "DELETE"
+      ],
       "AuthenticationOptions": {
         "AuthenticationProviderKey": "Bearer"
       }
-    }
+    }  
   ],
   "GlobalConfiguration": {
-    "BaseUrl": "https://localhost:7121"
+    "BaseUrl": "https://localhost:7121",
+    "Logging": {
+      "IncludeScopes": false,
+      "LogLevel": {
+        "Default": "Debug",
+        "Microsoft": "Warning",
+        "Ocelot": "Debug"
+      }
+    }
   }
 }

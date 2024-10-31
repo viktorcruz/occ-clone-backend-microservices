@@ -27,30 +27,30 @@ namespace UsersService.Controllers
         #endregion
 
         #region Methods
-        [HttpPost]
-        public async Task<IActionResult> CreateUserAsync([FromBody] AddUserDTO userDTO)
-        {
-            try
-            {
-                if (userDTO.IdRole == 0)
-                {
-                    return BadRequest();
-                }
-                var command = new CreateUserCommand(userDTO);
-                var endpointResponse = await _mediator.Send(command);
-                if (endpointResponse.IsSuccess)
-                {
-                    return Ok(endpointResponse);
-                }
-                return BadRequest(endpointResponse);
+        //[HttpPost]
+        //public async Task<IActionResult> CreateUserAsync([FromBody] AddUserDTO userDTO)
+        //{
+        //    try
+        //    {
+        //        if (userDTO.IdRole == 0)
+        //        {
+        //            return BadRequest();
+        //        }
+        //        var command = new CreateUserCommand(userDTO);
+        //        var endpointResponse = await _mediator.Send(command);
+        //        if (endpointResponse.IsSuccess)
+        //        {
+        //            return Ok(endpointResponse);
+        //        }
+        //        return BadRequest(endpointResponse);
 
-            }
-            catch (Exception ex)
-            {
-                _globalExceptionHandler.HandleGenericException<string>(ex, "UserController.CreateUser");
-                return StatusCode(500);
-            }
-        }
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        _globalExceptionHandler.HandleGenericException<string>(ex, "UserController.CreateUser");
+        //        return StatusCode(500);
+        //    }
+        //}
 
         [HttpGet("{userId}")]
         public async Task<ActionResult<UserRetrieveDTO>> GetUserByIdAsync(int userId)
@@ -100,13 +100,13 @@ namespace UsersService.Controllers
                 var query = new SearchUsersQuery(firstName, lastName, email);
                 var endpointResponse = await _mediator.Send(query);
 
-                if(endpointResponse.IsSuccess)
+                if (endpointResponse.IsSuccess)
                 {
                     return Ok(endpointResponse);
                 }
                 return BadRequest(endpointResponse);
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 _globalExceptionHandler.HandleGenericException<string>(ex, "UserController.SearchUsers");
                 return StatusCode(500);
@@ -149,6 +149,26 @@ namespace UsersService.Controllers
             catch (Exception ex)
             {
                 _globalExceptionHandler.HandleGenericException<string>(ex, "UserController.UpdateUserProfle");
+                return StatusCode(500);
+            }
+        }
+
+        [HttpPut("change-user-password")]
+        public async Task<IActionResult> ChangeUserPassword([FromBody] UserPasswordDTO passwordDTO)
+        {
+            try 
+            {
+                var command = new ChangeUserPasswordCommand(passwordDTO);
+                var endpointResponse = await _mediator.Send(command);
+                if (endpointResponse.IsSuccess)
+                {
+                    return Ok(endpointResponse);
+                }
+                return BadRequest(endpointResponse);
+            }
+            catch (Exception ex)
+            {
+                _globalExceptionHandler.HandleGenericException<string>(ex, "UserController");
                 return StatusCode(500);
             }
         }
@@ -213,6 +233,7 @@ namespace UsersService.Controllers
                 return StatusCode(500);
             }
         }
+
 
         [HttpDelete("{userId}")]
         public async Task<IActionResult> DeleteUserById(int userId)
