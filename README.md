@@ -10,6 +10,14 @@ El sistema permite gestionar:
 ## Estructura del Prototipo
 ```plaintext
 
+AuthService
+├── Applications
+├── Controllers
+├── Domain
+├── Infrastructure
+├── Modules
+└── Factories
+
 PublicationsService
 ├── Applications
 ├── Controllers
