@@ -2,7 +2,7 @@
 using AuthService.Application.DTO;
 using AuthService.Application.Interfaces;
 using AuthService.Domain.Exceptions;
-using AuthService.Domain.Ports.Output.Repositories;
+using AuthService.Domain.Ports.Output;
 
 namespace AuthService.Application.UsesCases
 {

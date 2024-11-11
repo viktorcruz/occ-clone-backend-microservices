@@ -2,7 +2,7 @@
 using AuthService.Application.DTO;
 using AuthService.Application.Interfaces;
 using AuthService.Domain.Entities;
-using AuthService.Domain.Ports.Output.Repositories;
+using AuthService.Domain.Ports.Output;
 using AuthService.Domain.Ports.Output.Services;
 using Microsoft.IdentityModel.Tokens;
 using System.Security.Claims;

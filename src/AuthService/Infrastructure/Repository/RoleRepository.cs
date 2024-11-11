@@ -1,24 +1,24 @@
 ﻿using AuthService.Domain.Entities;
-using AuthService.Domain.Ports.Output.Repositories;
-using AuthService.Factories.Interface;
+using AuthService.Domain.Ports.Output;
 using Dapper;
+using SharedKernel.Common.Interfaces;
 using SharedKernel.Common.Responses;
 using SharedKernel.Interface;
 
-namespace AuthService.Infrastructure.Repositories
+namespace AuthService.Infrastructure.Repository
 {
-    public class RoleRepository : IRoleRepository
+    public class RoleRepository : IRolePort
     {
         #region Properties
-        private readonly IDbConnectionFactory _connectionFactory;
+        private readonly ISqlServerConnectionFactory _sqlServerConnection;
         private readonly string OCC_Connection = "OCC_Connection";
         private readonly IGlobalExceptionHandler _globalExceptionHandler;
         #endregion
 
         #region Constructor
-        public RoleRepository(IDbConnectionFactory dbConnectionFactory, IGlobalExceptionHandler globalExceptionHandler)
+        public RoleRepository(ISqlServerConnectionFactory sqlServerConnection, IGlobalExceptionHandler globalExceptionHandler)
         {
-            _connectionFactory = dbConnectionFactory;
+            _sqlServerConnection = sqlServerConnection;
             _globalExceptionHandler = globalExceptionHandler;
         }
         #endregion
@@ -26,7 +26,7 @@ namespace AuthService.Infrastructure.Repositories
         #region Methods
         public async Task<RetrieveDatabaseResult<RoleEntity>> GetRoleByIdAsync(int roleId)
         {
-            using (var connection = _connectionFactory.GetConnection(OCC_Connection))
+            using (var connection = _sqlServerConnection.GetConnection(OCC_Connection))
             {
                 connection.Open();
                 try

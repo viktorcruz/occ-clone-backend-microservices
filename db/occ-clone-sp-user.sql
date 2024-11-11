@@ -43,7 +43,11 @@ BEGIN
 	DROP PROCEDURE [dbo].[Ups_UserPassword_Update]
 END
 GO
-
+IF OBJECT_ID('[dbo].[Usp_Users_Activate]','P') IS NOT NULL
+BEGIN
+	DROP PROCEDURE [dbo].[Usp_Users_Activate]
+END
+GO
 
 /** INSERT **/
 CREATE OR ALTER PROCEDURE
@@ -74,7 +78,8 @@ BEGIN
 			INSERT INTO @Result(ResultStatus, ResultMessage, OperationType, AffectedRecordId, OperationDateTime)
 			SELECT 0, 'Error: User already exists', 'NONE', NULL, GETDATE()
 
-			ROLLBACK TRANSACTION 
+            ROLLBACK TRANSACTION;
+            RETURN;
 		END
 		ELSE BEGIN
 			INSERT INTO [dbo].[Users](IdRole, FirstName, LastName, Email, PasswordHash, CreationDate)
@@ -127,30 +132,32 @@ BEGIN
 			LastName VARCHAR(20),
 			Email VARCHAR(50),
 			PasswordHash VARCHAR(100),
-			CreationDate DATETIME	
+			CreationDate DATETIME,
+			IsActive INT,
+			IsRegistrationConfirmed INT
 		)
 
 		BEGIN TRY
 			IF EXISTS( SELECT 1 FROM Users (nolock) WHERE IdUser = @IdUser )
 			BEGIN
-				INSERT INTO @Result(ResultStatus, ResultMessage, OperationType, AffectedRecordId, OperationDateTime, IdUser, IdRole, FirstName, LastName, Email, PasswordHash, CreationDate)
-				SELECT 1, 'User found', 'GET', 0, GETDATE(), IdUser, IdRole, FirstName, LastName, Email, PasswordHash, CreationDate
+				INSERT INTO @Result(ResultStatus, ResultMessage, OperationType, AffectedRecordId, OperationDateTime, IdUser, IdRole, FirstName, LastName, Email, PasswordHash, CreationDate, IsActive, IsRegistrationConfirmed)
+				SELECT 1, 'User found', 'GET', 0, GETDATE(), IdUser, IdRole, FirstName, LastName, Email, PasswordHash, CreationDate, IsActive, IsRegistrationConfirmed
 				FROM Users (nolock)  
 				WHERE IdUser = @IdUser
 
 			END
 			ELSE
 			BEGIN
-				INSERT INTO @Result(ResultStatus, ResultMessage, OperationType, AffectedRecordId, OperationDateTime, IdUser, IdRole, FirstName, LastName, Email, PasswordHash, CreationDate)
-				VALUES(0, 'Error: User not found', 'GET', 0, GETDATE(), NULL, NULL, NULL, NULL, NULL, NULL, NULL)
+				INSERT INTO @Result(ResultStatus, ResultMessage, OperationType, AffectedRecordId, OperationDateTime, IdUser, IdRole, FirstName, LastName, Email, PasswordHash, CreationDate, IsActive, IsRegistrationConfirmed)
+				VALUES(0, 'Error: User not found', 'GET', 0, GETDATE(), NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL)
 			END
 		END TRY
 		BEGIN CATCH
 			DECLARE @ErrorMessage NVARCHAR(4000)
 			SET @ErrorMessage = ERROR_MESSAGE()
 
-			INSERT INTO @Result(ResultStatus, ResultMessage, OperationType, AffectedRecordId, OperationDateTime, IdUser, IdRole, FirstName, LastName, Email, PasswordHash, CreationDate)
-			VALUES(0, @ErrorMessage, 'GET', 0, GETDATE(), NULL, NULL, NULL, NULL, NULL, NULL, NULL)
+			INSERT INTO @Result(ResultStatus, ResultMessage, OperationType, AffectedRecordId, OperationDateTime, IdUser, IdRole, FirstName, LastName, Email, PasswordHash, CreationDate, IsActive, IsRegistrationConfirmed)
+			VALUES(0, @ErrorMessage, 'GET', 0, GETDATE(), NULL, NULL, NULL, NULL, NULL, NULL, NULL,  NULL, NULL)
 		END CATCH
 	
 	SET NOCOUNT OFF;
@@ -159,12 +166,10 @@ BEGIN
 END
 GO
 
-
 /** GET **/
 CREATE OR ALTER PROCEDURE
 	Usp_UsersByCredentials_Get
 		@Email NVARCHAR(50)
-		--@PasswordHash NVARCHAR(100)
 AS
 BEGIN
 	SET NOCOUNT ON;
@@ -179,30 +184,32 @@ BEGIN
 			IdRole INT,
 			Email VARCHAR(50),
 			PasswordHash VARCHAR(100),
-			CreationDate DATETIME	
+			CreationDate DATETIME,
+			IsActive INT,
+			IsRegistrationConfirmed INT
 		)
 
 		BEGIN TRY
 			IF EXISTS( SELECT 1 FROM Users (nolock) WHERE Email = @Email)
 			BEGIN
-				INSERT INTO @Result(ResultStatus, ResultMessage, OperationType, AffectedRecordId, OperationDateTime, IdUser, IdRole, Email, PasswordHash, CreationDate)
-				SELECT 1, 'User found', 'GET', 0, GETDATE(), IdUser, IdRole, Email, PasswordHash, CreationDate
+				INSERT INTO @Result(ResultStatus, ResultMessage, OperationType, AffectedRecordId, OperationDateTime, IdUser, IdRole, Email, PasswordHash, CreationDate, IsActive, IsRegistrationConfirmed)
+				SELECT 1, 'User found', 'GET', 0, GETDATE(), IdUser, IdRole, Email, PasswordHash, CreationDate, IsActive, IsRegistrationConfirmed
 				FROM Users (nolock)  
 				WHERE Email = @Email 
 
 			END
 			ELSE
 			BEGIN
-				INSERT INTO @Result(ResultStatus, ResultMessage, OperationType, AffectedRecordId, OperationDateTime, IdUser, IdRole, Email, PasswordHash, CreationDate)
-				VALUES(0, 'Error: User not found', 'GET', 0, GETDATE(), NULL, NULL, NULL, NULL, NULL)
+				INSERT INTO @Result(ResultStatus, ResultMessage, OperationType, AffectedRecordId, OperationDateTime, IdUser, IdRole, Email, PasswordHash, CreationDate, IsActive, IsRegistrationConfirmed)
+				VALUES(0, 'Error: User not found', 'GET', 0, GETDATE(), NULL, NULL, NULL, NULL, NULL, NULL, NULL)
 			END
 		END TRY
 		BEGIN CATCH
 			DECLARE @ErrorMessage NVARCHAR(4000)
 			SET @ErrorMessage = ERROR_MESSAGE()
 
-			INSERT INTO @Result(ResultStatus, ResultMessage, OperationType, AffectedRecordId, OperationDateTime, IdUser, IdRole, Email, PasswordHash, CreationDate)
-			VALUES(0, @ErrorMessage, 'GET', 0, GETDATE(), NULL, NULL, NULL, NULL, NULL)
+			INSERT INTO @Result(ResultStatus, ResultMessage, OperationType, AffectedRecordId, OperationDateTime, IdUser, IdRole, Email, PasswordHash, CreationDate, IsActive, IsRegistrationConfirmed)
+			VALUES(0, @ErrorMessage, 'GET', 0, GETDATE(), NULL, NULL, NULL, NULL, NULL, NULL, NULL)
 		END CATCH
 	
 	SET NOCOUNT OFF;
@@ -228,7 +235,7 @@ BEGIN
 			IdUser INT,
 			Email VARCHAR(50),
 			PasswordHash VARCHAR(100),
-			CreationDate DATETIME	
+			CreationDate DATETIME
 		)
 
 		BEGIN TRY
@@ -260,6 +267,63 @@ BEGIN
 END
 GO
 
+/** CONFIRM REGISTER **/
+CREATE OR ALTER PROCEDURE
+	Usp_Users_ConfirmRegister
+		@IdUser INT,
+		@Email NVARCHAR(100)
+AS
+BEGIN
+	SET NOCOUNT ON;
+	DECLARE @ErrorMessage NVARCHAR(4000);
+	DECLARE @Result AS TABLE
+	(
+		ResultStatus INT, 
+		ResultMessage NVARCHAR(100),
+		OperationType NVARCHAR(20),
+		AffectedRecordId INT,
+		OperationDateTime DATETIME
+	);
+
+	BEGIN TRY
+		BEGIN TRANSACTION TUP
+			IF NOT EXISTS(SELECT 1 FROM Users WHERE IdUser = @IdUser AND Email = @Email)
+			BEGIN
+				INSERT INTO @Result(ResultStatus, ResultMessage, OperationType, AffectedRecordId, OperationDateTime)
+				VALUES(0, 'Error: User not found', 'NONE', NULL, GETDATE())
+
+				ROLLBACK TRANSACTION TUP
+				RETURN;
+			END
+			ELSE BEGIN
+				UPDATE Users
+					SET IsActive = 1,
+						IsRegistrationConfirmed = 1,
+						RegistrationConfirmedAt = GETDATE()
+				WHERE IdUser = @IdUser AND Email = @Email
+
+				INSERT INTO @Result(ResultStatus, ResultMessage, OperationType, AffectedRecordId, OperationDateTime)
+				VALUES(1, 'Data has been successfully updated', 'UPDATE', @IdUser, GETDATE())
+
+				COMMIT TRANSACTION TUP
+			END
+	END TRY
+	BEGIN CATCH
+		IF @@TRANCOUNT > 0
+		BEGIN 
+			ROLLBACK TRANSACTION TUP
+		END
+
+		SET @ErrorMessage = ERROR_MESSAGE()
+		INSERT INTO @Result(ResultStatus, ResultMessage, OperationType, AffectedRecordId, OperationDateTime)
+		VALUES(0, @ErrorMessage, 'ERROR', @IdUser, GETDATE())
+	END CATCH
+
+	SET NOCOUNT OFF;
+	SELECT * FROM @Result
+END
+GO
+
 /** GET ALL **/
 CREATE OR ALTER PROCEDURE
 	Usp_Users_GetAll
@@ -279,20 +343,26 @@ BEGIN
 			LastName VARCHAR(20),
 			Email VARCHAR(50),
 			PasswordHash VARCHAR(100),
-			CreationDate DATETIME
+			CreationDate DATETIME,
+			RegistrationConfirmedAt DATETIME,
+			IsActive INT,
+			IsRegistrationConfirmed INT
 		)
 
 		BEGIN TRY
-			INSERT INTO @Result(ResultStatus, ResultMessage, OperationType, AffectedRecordId, OperationDateTime, IdUser, IdRole, FirstName, LastName, Email, PasswordHash, CreationDate )
-			SELECT 1, 'User found', 'GET ALL', 0, GETDATE(), IdUser, IdRole, FirstName, LastName, Email, PasswordHash, CreationDate
+			INSERT INTO @Result(ResultStatus, ResultMessage, OperationType, AffectedRecordId, OperationDateTime, IdUser, IdRole, 
+				FirstName, LastName, Email, PasswordHash, CreationDate, RegistrationConfirmedAt, IsActive, IsRegistrationConfirmed)
+			SELECT 1, 'User found', 'GET ALL', 0, GETDATE(), IdUser, IdRole, FirstName, LastName, Email, PasswordHash, CreationDate, RegistrationConfirmedAt, 
+				IsActive, IsRegistrationConfirmed
 			FROM Users
 		END TRY
 		BEGIN CATCH
 			DECLARE @ErrorMessage NVARCHAR(4000)
 			SET @ErrorMessage = ERROR_MESSAGE()
 
-			INSERT INTO @Result(ResultStatus, ResultMessage, OperationType, AffectedRecordId, OperationDateTime, IdUser, IdRole, FirstName, LastName, Email, PasswordHash, CreationDate )
-			VALUES(0, @ErrorMessage, 'GET ALL', 0, GETDATE(), NULL, NULL, NULL, NULL, NULL, NULL, NULL)
+			INSERT INTO @Result(ResultStatus, ResultMessage, OperationType, AffectedRecordId, OperationDateTime, IdUser, IdRole, 
+				FirstName, LastName, Email, PasswordHash, CreationDate, RegistrationConfirmedAt, IsActive, IsRegistrationConfirmed)
+			VALUES(0, @ErrorMessage, 'GET ALL', 0, GETDATE(), NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL)
 		END CATCH
 	
 	SET NOCOUNT OFF;
@@ -325,14 +395,15 @@ BEGIN
 		OperationDateTime DATETIME
 	)
 	BEGIN TRY
-		BEGIN TRANSACTION TrnxUpCategories
+		BEGIN TRANSACTION 
 
 		IF NOT EXISTS(SELECT 1 FROM [dbo].[Users] WHERE IdUser = @IdUser)
 		BEGIN
 			INSERT INTO @Result(ResultStatus, ResultMessage, OperationType, AffectedRecordId, OperationDateTime)
 			SELECT 0, 'Error: user not found', 'NONE', NULL, GETDATE()
 
-			ROLLBACK TRANSACTION TrnxUpCategories
+            ROLLBACK TRANSACTION;
+            RETURN;
 		END
 		ELSE BEGIN
 			UPDATE Users
@@ -348,7 +419,7 @@ BEGIN
 			INSERT INTO @Result(ResultStatus, ResultMessage, OperationType, AffectedRecordId, OperationDateTime)
 			VALUES (1, 'Data has been sucessfully updated', 'UPDATE', @IdUser, GETDATE())
 
-			COMMIT TRANSACTION TrnxUpCategories
+			COMMIT TRANSACTION 
 		END
 	END TRY
 	
@@ -356,7 +427,7 @@ BEGIN
 	BEGIN CATCH
 		IF @@TRANCOUNT > 0
 		BEGIN
-			ROLLBACK TRANSACTION TrnUpdating
+			ROLLBACK TRANSACTION 
 		END
 
 		INSERT INTO @Result(ResultStatus, ResultMessage, OperationType, AffectedRecordId, OperationDateTime)
@@ -388,14 +459,15 @@ BEGIN
 		OperationDateTime DATETIME
 	)
 	BEGIN TRY
-		BEGIN TRANSACTION TrnxUpCategories
+		BEGIN TRANSACTION 
 
 		IF NOT EXISTS(SELECT 1 FROM [dbo].[Users] WHERE IdUser = @IdUser)
 		BEGIN
 			INSERT INTO @Result(ResultStatus, ResultMessage, OperationType, AffectedRecordId, OperationDateTime)
 			SELECT 0, 'Error: user not found', 'NONE', NULL, GETDATE()
 
-			ROLLBACK TRANSACTION TrnxUpCategories
+            ROLLBACK TRANSACTION;
+            RETURN;
 		END
 		ELSE BEGIN
 			UPDATE Users
@@ -408,7 +480,7 @@ BEGIN
 			INSERT INTO @Result(ResultStatus, ResultMessage, OperationType, AffectedRecordId, OperationDateTime)
 			VALUES (1, 'Data has been sucessfully updated', 'UPDATE', @IdUser, GETDATE())
 
-			COMMIT TRANSACTION TrnxUpCategories
+			COMMIT TRANSACTION 
 		END
 	END TRY
 	
@@ -416,7 +488,7 @@ BEGIN
 	BEGIN CATCH
 		IF @@TRANCOUNT > 0
 		BEGIN
-			ROLLBACK TRANSACTION TrnUpdating
+			ROLLBACK TRANSACTION 
 		END
 
 		INSERT INTO @Result(ResultStatus, ResultMessage, OperationType, AffectedRecordId, OperationDateTime)
@@ -432,7 +504,6 @@ GO
 /** UPDATE PASSWORD **/
 CREATE OR ALTER PROCEDURE
 	Usp_UserPassword_Update
-		--@IdUser INT,
 		@Email NVARCHAR(50),
 		@PasswordHash NVARCHAR(100)
 AS
@@ -454,7 +525,8 @@ BEGIN
 			INSERT INTO @Result(ResultStatus, ResultMessage, OperationType, AffectedRecordId, OperationDateTime)
 			SELECT 0, 'Error: user not found', 'NONE', NULL, GETDATE()
 
-			ROLLBACK TRANSACTION TrnxUpCategories
+            ROLLBACK TRANSACTION;
+            RETURN;
 		END
 		ELSE BEGIN
 			UPDATE Users
@@ -465,7 +537,7 @@ BEGIN
 			INSERT INTO @Result(ResultStatus, ResultMessage, OperationType, AffectedRecordId, OperationDateTime)
 			VALUES (1, 'Data has been sucessfully updated', 'UPDATE', @LastId, GETDATE())
 
-			COMMIT TRANSACTION TrnxUpCategories
+			COMMIT TRANSACTION 
 		END
 	END TRY
 	
@@ -473,7 +545,7 @@ BEGIN
 	BEGIN CATCH
 		IF @@TRANCOUNT > 0
 		BEGIN
-			ROLLBACK TRANSACTION TrnUpdating
+			ROLLBACK TRANSACTION 
 		END
 
 		INSERT INTO @Result(ResultStatus, ResultMessage, OperationType, AffectedRecordId, OperationDateTime)
@@ -482,6 +554,63 @@ BEGIN
 	END CATCH
 	SET NOCOUNT OFF;
 	
+	SELECT * FROM @Result
+END
+GO
+
+/** ACTIVE **/
+CREATE OR ALTER 
+	PROCEDURE
+		Usp_Users_Activate
+			@IdUser INT,
+			@Status INT
+AS
+BEGIN
+	SET NOCOUNT ON;
+	DECLARE @ErrorMessage NVARCHAR(4000)
+	DECLARE @Result AS TABLE
+	(
+		ResultStatus BIT, 
+		ResultMessage NVARCHAR(100),
+		OperationType NVARCHAR(20),
+		AffectedRecordId INT, 
+		OperationDateTime DATETIME
+	);
+
+	BEGIN TRY
+		BEGIN TRANSACTION TUP
+
+		IF NOT EXISTS(SELECT 1 FROM [dbo].[Users] WHERE IdUser = @IdUser)
+		BEGIN
+			INSERT INTO @Result(ResultStatus, ResultMessage, OperationType, AffectedRecordId, OperationDateTime)
+			VALUES (0, 'Error: User not found', 'NONE', NULL, GETDATE())
+
+            ROLLBACK TRANSACTION;
+            RETURN;
+		END
+		ELSE BEGIN
+			UPDATE Users
+				SET IsActive = @Status
+			WHERE IdUser = @IdUser
+
+			INSERT INTO @Result(ResultStatus, ResultMessage, OperationType, AffectedRecordId, OperationDateTime)
+			VALUES( 1, 'Data has been successfully updated', 'UPDATE', @IdUser, GETDATE())
+
+			COMMIT TRANSACTION 
+		END
+	END TRY
+
+	BEGIN CATCH
+		IF @@TRANCOUNT > 0
+		BEGIN
+			ROLLBACK TRANSACTION 
+		END
+		SET @ErrorMessage = ERROR_MESSAGE()
+		INSERT INTO @Result(ResultStatus, ResultMessage, OperationType, AffectedRecordId, OperationDateTime)
+		VALUES(0, @ErrorMessage, 'ERROR', @IdUser, GETDATE())
+	END CATCH
+
+	SET NOCOUNT OFF;
 	SELECT * FROM @Result
 END
 GO
@@ -513,19 +642,20 @@ BEGIN
 			INSERT INTO @Result(ResultStatus, ResultMessage, OperationType, AffectedRecordId, OperationDateTime)
 			VALUES(0, 'Error: User not found', 'NONE', @IdUser, GETDATE())
 
-			ROLLBACK TRANSACTION TDEL
+            ROLLBACK TRANSACTION;
+            RETURN;
 		END
 		ELSE BEGIN
 			INSERT INTO @Result(ResultStatus, ResultMessage, OperationType, AffectedRecordId, OperationDateTime)
 			VALUES(1, 'Data has been sucessfully deleted', 'DELETE', @IdUser, GETDATE())
 
-			COMMIT TRANSACTION TDEL
+			COMMIT TRANSACTION 
 		END
 	END TRY
 	BEGIN CATCH
 		IF @@TRANCOUNT > 0
 		BEGIN
-			ROLLBACK TRANSACTION TDEL
+			ROLLBACK TRANSACTION 
 		END
 
 		SET @ErrorMessage = ERROR_MESSAGE()

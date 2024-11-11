@@ -1,7 +1,7 @@
 ﻿using AuthService.Application.Commands;
 using AuthService.Application.DTO;
 using AuthService.Application.Interfaces;
-using AuthService.Domain.Ports.Output.Repositories;
+using AuthService.Domain.Ports.Output;
 using AuthService.Domain.Ports.Output.Services;
 
 namespace AuthService.Application.UsesCases

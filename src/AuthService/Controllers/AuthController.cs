@@ -12,14 +12,21 @@ namespace AuthService.Controllers
         private readonly ILoginUseCase _loginUseCase;
         private readonly IRegisterUseCase _registerUseCase;
         private readonly IRenewTokenUseCase _renewTokenUseCase;
+        private readonly IConfirRegisterUserCase _confirRegisterUserCase;
         #endregion
 
         #region Constructor
-        public AuthController(ILoginUseCase loginUseCase, IRegisterUseCase registerUseCase, IRenewTokenUseCase renewTokenUseCase)
+        public AuthController(
+            ILoginUseCase loginUseCase,
+            IRegisterUseCase registerUseCase,
+            IRenewTokenUseCase renewTokenUseCase,
+            IConfirRegisterUserCase confirRegisterUserCase
+            )
         {
             _loginUseCase = loginUseCase;
             _registerUseCase = registerUseCase;
             _renewTokenUseCase = renewTokenUseCase;
+            _confirRegisterUserCase = confirRegisterUserCase;
         }
         #endregion
 
@@ -58,7 +65,7 @@ namespace AuthService.Controllers
                 {
                     return BadRequest();
                 }
-                var response = await _registerUseCase.Execute(command); 
+                var response = await _registerUseCase.Execute(command);
                 return Ok(response);
             }
             catch (UnauthorizedAccessException ex)
@@ -91,6 +98,26 @@ namespace AuthService.Controllers
             catch (Exception ex)
             {
                 return StatusCode(500, "Internal server error");
+            }
+        }
+
+        [HttpPut("confirm-registration")]
+        public async Task<IActionResult> ConfirmUserRegistration(string email)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(email)) { return BadRequest(); }
+                var command = new ConfirmRegisterCommand(email);
+                var response = await _confirRegisterUserCase.Execute(command);
+                return Ok(response);
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Unauthorized(ex.Message);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ex.Message);
             }
         }
         #endregion

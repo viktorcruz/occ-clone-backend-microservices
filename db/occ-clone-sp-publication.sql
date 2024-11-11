@@ -2,59 +2,59 @@ USE [OCC_CLONE]
 GO
 
 /** INSERT **/
-CREATE OR ALTER PROCEDURE
-	Usp_Publications_Add
-		@IdUser INT, 
-		@IdRole INT, 
-		@Title NVARCHAR(50),
-		@Description NVARCHAR(255),
-		@ExpirationDate DATETIME,
-		@Status INT,
-		@Salary DECIMAL,
-		@Location NVARCHAR(100),
-		@Company NVARCHAR(100)
+ALTER PROCEDURE [dbo].[Usp_Publications_Add]
+    @IdUser INT, 
+    @IdRole INT, 
+    @Title NVARCHAR(50),
+    @Description NVARCHAR(255),
+    @ExpirationDate DATETIME,
+    @Status INT,
+    @Salary DECIMAL,
+    @Location NVARCHAR(100),
+    @Company NVARCHAR(100),
+	@IdJobType INT
 AS
 BEGIN
-	SET NOCOUNT ON;
+    SET NOCOUNT ON;
 
-	DECLARE @Result AS TABLE
-	(
-		ResultStatus BIT,
-		ResultMessage NVARCHAR(100),
-		OperationType NVARCHAR(20),
-		AffectedRecordId INT, 
-		OperationDateTime DATETIME
-	)
-	
-	BEGIN TRY
-		BEGIN TRANSACTION
+    DECLARE @Result AS TABLE
+    (
+        ResultStatus BIT,
+        ResultMessage NVARCHAR(100),
+        OperationType NVARCHAR(20),
+        AffectedRecordId INT, 
+        OperationDateTime DATETIME
+    );
 
-			INSERT INTO [dbo].[Publications](IdUser, IdRole, Title, Description, PublicationDate, ExpirationDate, Status, Salary, Location, Company)
-			VALUES(@IdUser, @IdRole, @Title, @Description, GETDATE(), @ExpirationDate, @Status, @Salary, @Location, @Company)
-			
-			DECLARE @LastId INT = (SELECT SCOPE_IDENTITY())
-			
-			INSERT INTO @Result(ResultStatus, ResultMessage, OperationType, AffectedRecordId, OperationDateTime)
-			VALUES(1, 'Data has been successfuly inserted', 'INSERT', @LastId, GETDATE())
-			
-			COMMIT TRANSACTION
-
-	END TRY
-	
-	BEGIN CATCH
+    BEGIN TRY
+        BEGIN TRANSACTION;
+        
+        INSERT INTO [dbo].[Publications](IdUser, IdRole, Title, Description, PublicationDate, ExpirationDate, Status, Salary, Location, Company, IdJobType)
+        VALUES(@IdUser, @IdRole, @Title, @Description, GETDATE(), @ExpirationDate, @Status, @Salary, @Location, @Company, @IdJobType);
+        
+        DECLARE @LastId INT = SCOPE_IDENTITY();
+        
+        INSERT INTO @Result(ResultStatus, ResultMessage, OperationType, AffectedRecordId, OperationDateTime)
+        VALUES(1, 'Data has been successfully inserted', 'INSERT', @LastId, GETDATE());
+        
+        COMMIT TRANSACTION;
+        
+    END TRY
+    BEGIN CATCH
 		IF @@TRANCOUNT > 0
 		BEGIN
-			ROLLBACK TRANSACTION
+			ROLLBACK TRANSACTION;
 		END
-		
-		INSERT INTO @Result(ResultStatus, ResultMessage, OperationType, AffectedRecordId, OperationDateTime)
-		VALUES(0, ERROR_MESSAGE(), 'ERROR', NULL, GETDATE())
-		
-	END CATCH
-	
-	SET NOCOUNT OFF;	
-	SELECT * FROM @Result
-END
+        
+        INSERT INTO @Result(ResultStatus, ResultMessage, OperationType, AffectedRecordId, OperationDateTime)
+        VALUES(0, ERROR_MESSAGE(), 'ERROR', NULL, GETDATE());
+        
+    END CATCH
+
+    SET NOCOUNT OFF;    
+
+    SELECT * FROM @Result;
+END;
 GO
 
 /** GET **/
@@ -183,14 +183,14 @@ BEGIN
 		OperationDateTime DATETIME
 	)
 	BEGIN TRY
-		BEGIN TRANSACTION TUP
+		BEGIN TRANSACTION 
 			IF NOT EXISTS(SELECT 1 FROM Publications WHERE IdPublication = @IdPublication)
 			BEGIN
 				INSERT INTO @Result(ResultStatus, ResultMessage, OperationType, AffectedRecordId, OperationDateTime)
 				VALUES (0, 'Error: Publication not found', 'NONE', NULL, GETDATE())
 
-				ROLLBACK TRANSACTION TUP
-				RETURN
+            ROLLBACK TRANSACTION;
+            RETURN;
 			END
 			ELSE BEGIN
 				UPDATE Publications
@@ -204,14 +204,14 @@ BEGIN
 				INSERT INTO @Result(ResultStatus, ResultMessage, OperationType, AffectedRecordId, OperationDateTime)
 				VALUES ( 1, 'Data has been successfully updated', 'UPDATE', @IdPublication, GETDATE())
 
-				COMMIT TRANSACTION TUP
+				COMMIT TRANSACTION 
 			END		
 	END TRY
 
 	BEGIN CATCH
 		IF @@TRANCOUNT > 0
 		BEGIN
-			ROLLBACK TRANSACTION TUP
+			ROLLBACK TRANSACTION 
 		END
 		SET @ErrorMessage = ERROR_MESSAGE()
 		INSERT INTO @Result(ResultStatus, ResultMessage, OperationType, AffectedRecordId, OperationDateTime)
@@ -222,7 +222,7 @@ BEGIN
 	SET NOCOUNT OFF;
 	SELECT * FROM @Result
 END
-
+GO
 
 /** DELETE **/
 CREATE OR 
@@ -243,7 +243,7 @@ BEGIN
 			OperationDateTime DATETIME
 		)
 		BEGIN TRY
-			BEGIN TRANSACTION TDEL
+			BEGIN TRANSACTION 
 				DELETE FROM Publications
 				WHERE IdPublication = @IdPublication
 			
@@ -252,20 +252,21 @@ BEGIN
 				INSERT INTO @Result(ResultStatus, ResultMessage, OperationType, AffectedRecordId, OperationDateTime)
 				VALUES(0, 'Error: Publication not found', 'NONE', @IdPublication, GETDATE())
 
-				ROLLBACK TRANSACTION TDEL
+            ROLLBACK TRANSACTION;
+            RETURN;
 			END
 			ELSE BEGIN
 				INSERT INTO @Result(ResultStatus, ResultMessage, OperationType, AffectedRecordId, OperationDateTime)
 				VALUES(1, 'Data has been successfully deleted', 'DELETE', @IdPublication, GETDATE())
 
-				COMMIT TRANSACTION TDEL
+				COMMIT TRANSACTION 
 			END
 		END TRY
 
 		BEGIN CATCH
 			IF @@TRANCOUNT > 0
 			BEGIN
-				ROLLBACK TRANSACTION TDEL
+				ROLLBACK TRANSACTION 
 			END
 
 			SET @ErrorMessage = ERROR_MESSAGE()

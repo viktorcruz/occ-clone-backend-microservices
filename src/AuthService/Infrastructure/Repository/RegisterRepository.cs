@@ -1,25 +1,25 @@
 ﻿using AuthService.Domain.Entities;
-using AuthService.Domain.Ports.Output.Repositories;
-using AuthService.Factories.Interface;
+using AuthService.Domain.Ports.Output;
 using Dapper;
+using SharedKernel.Common.Interfaces;
 using SharedKernel.Common.Responses;
 using SharedKernel.Interface;
 using System.Data;
 
-namespace AuthService.Infrastructure.Repositories
+namespace AuthService.Infrastructure.Repository
 {
-    public class RegisterRepository : IRegisterRepository
+    public class RegisterRepository : IRegisterUserPort
     {
         #region Properties
-        private readonly IDbConnectionFactory _connectionFactory;
+        private readonly ISqlServerConnectionFactory _sqlServerConnection;
         private readonly string OCC_Connection = "OCC_Connection";
         private readonly IGlobalExceptionHandler _globalExceptionHandler;
         #endregion
 
         #region Constructor
-        public RegisterRepository(IDbConnectionFactory connectionFactory, IGlobalExceptionHandler globalExceptionHandler)
+        public RegisterRepository(ISqlServerConnectionFactory sqlServerConnection, IGlobalExceptionHandler globalExceptionHandler)
         {
-            _connectionFactory = connectionFactory;
+            _sqlServerConnection = sqlServerConnection;
             _globalExceptionHandler = globalExceptionHandler;
         }
         #endregion
@@ -27,7 +27,7 @@ namespace AuthService.Infrastructure.Repositories
         #region Methods
         public async Task<DatabaseResult> AddAsync(RegisterEntity registerEntity)
         {
-            using (var connection = _connectionFactory.GetConnection(OCC_Connection))
+            using (var connection = _sqlServerConnection.GetConnection(OCC_Connection))
             {
                 connection.Open();
 

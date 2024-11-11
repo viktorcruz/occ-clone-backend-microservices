@@ -1,24 +1,25 @@
 ﻿using AuthService.Domain.Entities;
-using AuthService.Domain.Ports.Output.Repositories;
-using AuthService.Factories.Interface;
+using AuthService.Domain.Ports.Output;
 using Dapper;
+using SharedKernel.Common.Interfaces;
 using SharedKernel.Common.Responses;
 using SharedKernel.Interface;
+using System.Data;
 
-namespace AuthService.Infrastructure.Repositories
+namespace AuthService.Infrastructure.Repository
 {
-    public class UserRepository : IUserRepository
+    public class UserRepository : IUserPort
     {
         #region Properties
-        private readonly IDbConnectionFactory _connectionFactory;
+        private readonly ISqlServerConnectionFactory _sqlServerConnection;
         private readonly string OCC_Connection = "OCC_Connection";
         private readonly IGlobalExceptionHandler _globalExceptionHandler;
         #endregion
 
         #region Constructor
-        public UserRepository(IDbConnectionFactory dbConnectionFactory, IGlobalExceptionHandler globalExceptionHandler)
+        public UserRepository(ISqlServerConnectionFactory sqlServerConnection, IGlobalExceptionHandler globalExceptionHandler)
         {
-            _connectionFactory = dbConnectionFactory;
+            _sqlServerConnection = sqlServerConnection;
             _globalExceptionHandler = globalExceptionHandler;
         }
         #endregion
@@ -26,10 +27,10 @@ namespace AuthService.Infrastructure.Repositories
         #region Methods
         public async Task<RetrieveDatabaseResult<UserByEmailEntity>> GetByEmailAsync(string email)
         {
-            using (var connection = _connectionFactory.GetConnection(OCC_Connection))
+            using (var connection = _sqlServerConnection.GetConnection(OCC_Connection))
             {
                 connection.Open();
-                try 
+                try
                 {
                     var query = "Usp_UsersByCredentials_Get";
                     var parameters = new DynamicParameters();
@@ -53,6 +54,8 @@ namespace AuthService.Infrastructure.Repositories
                                 IdRole = response.IdRole,
                                 Email = response.Email,
                                 PasswordHash = response.PasswordHash,
+                                IsActive = response.IsActive,
+                                IsRegistrationConfirmed = response.IsRegistrationConfirmed,
                             }
                         };
                         return spResult;
@@ -81,7 +84,7 @@ namespace AuthService.Infrastructure.Repositories
         }
         public async Task<RetrieveDatabaseResult<UserByEmailEntity>> GetUserByCredentialsAsync(string email)
         {
-            using (var connection = _connectionFactory.GetConnection(OCC_Connection))
+            using (var connection = _sqlServerConnection.GetConnection(OCC_Connection))
             {
                 connection.Open();
                 try
@@ -134,7 +137,68 @@ namespace AuthService.Infrastructure.Repositories
                     Details = null
                 };
             }
-            #endregion
         }
+
+        public async Task<DatabaseResult> ChangeUserStatusAsync(int userId, string email)
+        {
+            using (var connection = _sqlServerConnection.GetConnection(OCC_Connection))
+            {
+                connection.Open();
+
+                using (var transaction = connection.BeginTransaction())
+                {
+                    try
+                    {
+                        var query = "Usp_Users_ConfirmRegister";
+                        var parameters = new DynamicParameters();
+                        parameters.Add("@IdUser", userId);
+                        parameters.Add("@Email", email);
+
+                        var results = await connection.QuerySingleAsync<DatabaseResult>(query, parameters, transaction, commandType: CommandType.StoredProcedure);
+
+                        transaction.Commit();
+
+                        if (results != null)
+                        {
+                            return results;
+                        }
+                        else
+                        {
+                            return await Task.FromResult<DatabaseResult>(new DatabaseResult
+                            {
+                                ResultStatus = false,
+                                ResultMessage = "User not found",
+                                OperationType = "Confirm register",
+                                AffectedRecordId = 0,
+                                OperationDateTime = DateTime.Now,
+                                ExceptionMessage = "No exceptions found"
+                            }); ;
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        transaction.Rollback();
+                        _globalExceptionHandler.HandleGenericException<string>(ex, "UserRepository");
+                        return await Task.FromResult(new DatabaseResult
+                        {
+                            ResultStatus = false,
+                            ResultMessage = ex.Message,
+                            OperationType = "Confirm register",
+                            AffectedRecordId = userId,
+                            OperationDateTime = DateTime.Now,
+                            ExceptionMessage = ex.Message
+                        });
+                    }
+                    finally
+                    {
+                        if (connection.State == ConnectionState.Open)
+                        {
+                            connection.Close();
+                        }
+                    }
+                }
+            }
+        }
+        #endregion
     }
 }

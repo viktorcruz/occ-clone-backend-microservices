@@ -1,17 +1,18 @@
-﻿using AuthService.Factories.Interface;
+﻿using Microsoft.Extensions.Configuration;
+using SharedKernel.Common.Interfaces;
 using System.Data;
 using System.Data.SqlClient;
 
-namespace AuthService.Factories
+namespace SharedKernel.Data
 {
-    public class DbConnectionFactory : IDbConnectionFactory
+    public class SqlServerConnectionFactory : ISqlServerConnectionFactory
     {
         #region Properties
         private readonly IConfiguration _configuration;
         #endregion
 
         #region Constructor
-        public DbConnectionFactory(IConfiguration configuration)
+        public SqlServerConnectionFactory(IConfiguration configuration)
         {
             _configuration = configuration;
         }
@@ -23,7 +24,7 @@ namespace AuthService.Factories
             var connectionString = _configuration.GetConnectionString(connectionName);
             if (connectionString == null)
             {
-                throw new ArgumentNullException("Connection name must not be empty", nameof(connectionName));
+                throw new ArgumentException("Connection name must not be empty", nameof(connectionName));
             }
             return new SqlConnection(connectionString);
         }

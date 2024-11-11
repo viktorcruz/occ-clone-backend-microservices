@@ -32,6 +32,11 @@ IF EXISTS(SELECT 1 FROM SYS.OBJECTS WHERE OBJECT_ID = OBJECT_ID(N'[dbo].[Users]'
 BEGIN
 	ALTER TABLE [dbo].[Users] DROP CONSTRAINT IF EXISTS [FK_Users_Roles]
 END
+IF EXISTS(SELECT 1 FROM SYS.OBJECTS WHERE OBJECT_ID = OBJECT_ID(N'[dbo].[JobApplications]'))
+BEGIN 
+	ALTER TABLE [dbo].[JobApplications] DROP CONSTRAINT IF EXISTS [FK_JobApplications_Publications]
+	ALTER TABLE [dbo].[JobApplications] DROP CONSTRAINT IF EXISTS [FK_JobApplications_Users] 
+END
 GO
 
 --;
@@ -67,7 +72,14 @@ IF EXISTS(SELECT 1 FROM SYS.OBJECTS WHERE OBJECT_ID = OBJECT_ID(N'[dbo].[Users]'
 BEGIN
 	DROP TABLE [dbo].[Users]
 END
-
+IF EXISTS(SELECT 1 FROM SYS.OBJECTS WHERE OBJECT_ID = OBJECT_ID(N'[dbo].[EventLogs]'))
+BEGIN
+	DROP TABLE [dbo].[EventLogs] 
+END
+IF EXISTS(SELECT 1 FROM SYS.OBJECTS WHERE OBJECT_ID = OBJECT_ID(N'[dbo].[JobApplications]'))
+BEGIN
+	DROP TABLE [dbo].[JobApplications]
+END
 GO
 
 CREATE TABLE Roles
@@ -110,6 +122,11 @@ ALTER TABLE RefreshTokens
 	WITH CHECK ADD CONSTRAINT [FK_RefreshTokens_Users]
 	FOREIGN KEY([IdUser]) REFERENCES Users([IdUser])
 
+CREATE TABLE JobTypes
+(
+	IdJobType INT IDENTITY(1,1) PRIMARY KEY CLUSTERED,
+	JobTypeName NVARCHAR(50) NOT NULL
+)
 
 CREATE TABLE Publications
 (
@@ -124,6 +141,7 @@ CREATE TABLE Publications
 	Salary DECIMAL(10, 2) NULL,
 	Location NVARCHAR(100) NULL,
 	Company NVARCHAR(100) NULL,
+	IdJobType INT NULL
 )
 
 ALTER TABLE Publications
@@ -132,13 +150,16 @@ ALTER TABLE Publications
 ALTER TABLE Publications
 	WITH CHECK ADD CONSTRAINT [FK_Publications_Roles]
 	FOREIGN KEY([IdRole]) REFERENCES Roles([IdRole])
+ALTER TABLE Publications
+	WITH CHECK ADD CONSTRAINT [FK_Publications_JobType]
+	FOREIGN KEY([IdJobType]) REFERENCES JobTypes([IdJobType])
 
 CREATE TABLE SelectionProcess
 (
 	IdSelectionProcess INT IDENTITY(1,1) PRIMARY KEY CLUSTERED,
 	IdPublication INT NOT NULL,
 	IdApplicant INT NOT NULL,
-	Status NVARCHAR(20) NOT NULL,
+	ApplicationStatus NVARCHAR(20) NOT NULL,
 	ApplicationDate DATETIME NOT NULL
 )
 
@@ -150,23 +171,25 @@ ALTER TABLE SelectionProcess
 	FOREIGN KEY([IdApplicant]) REFERENCES Users([IdUser])
 	   
 
-CREATE TABLE JobTypes
+CREATE TABLE JobApplications
 (
-	IdJobType INT IDENTITY(1,1) PRIMARY KEY CLUSTERED,
-	JobTypeName NVARCHAR(50) NOT NULL
+	IdApplication INT IDENTITY(1,1) PRIMARY KEY CLUSTERED,
+	IdPublication INT NOT NULL,
+	IdApplicant INT NOT NULL,
+	ApplicantName NVARCHAR(100) NOT NULL,
+	ApplicantResume NVARCHAR(MAX) NULL,
+	CoverLetter NVARCHAR(MAX) NULL,
+	ApplicationDate DATETIME NOT NULL DEFAULT GETDATE(),
+	Status NVARCHAR(20) NOT NULL DEFAULT 'Applied'
 )
 
-CREATE TABLE Jobs
-(
-	IdJob INT IDENTITY(1,1) PRIMARY KEY CLUSTERED,
-	JobTile NVARCHAR(100) NOT NULL,
-	JobDescription NVARCHAR(MAX) NULL,
-	IdJobType INT NOT NULL
-)
+ALTER TABLE [JobApplications]
+	WITH CHECK ADD CONSTRAINT [FK_JobApplications_Publications]
+	FOREIGN KEY([IdPublication]) REFERENCES Publications([IdPublication])
 
-ALTER TABLE Jobs
-	WITH CHECK ADD CONSTRAINT [FK_Jobs_JobsTypes]
-	FOREIGN KEY([IdJobType]) REFERENCES JobTypes([IdJobType])
+ALTER TABLE [JobApplications]
+	WITH CHECK ADD CONSTRAINT [FK_JobApplications_Users]
+	FOREIGN KEY([IdApplicant]) REFERENCES Users([IdUser])
 
 CREATE TABLE SearchJobs
 (
@@ -187,52 +210,90 @@ ALTER TABLE SearchJobs
 	WITH CHECK ADD CONSTRAINT [FK_SearchJobs_Users]
 	FOREIGN KEY([IdUser]) REFERENCES Users([IdUser])
 
-INSERT INTO Roles(RoleName) VALUES('Recruiter'),('Applicant')
 
+CREATE TABLE EventLogs (
+    Id INT IDENTITY(1,1) PRIMARY KEY CLUSTERED,
+    EventName NVARCHAR(100) NOT NULL,
+    EventData NVARCHAR(MAX) NOT NULL,
+    Exchange NVARCHAR(100) NOT NULL,
+    RoutingKey NVARCHAR(100) NOT NULL,
+    CreatedAt DATETIME NOT NULL DEFAULT GETDATE()
+);
+
+/******
+
+ALTER PROCEDURE [dbo].[Usp_EventLog_Add]
+    @EventName NVARCHAR(100),
+    @EventData NVARCHAR(MAX),
+    @Exchange NVARCHAR(100),
+    @RoutingKey NVARCHAR(100)
+AS
+BEGIN
+    INSERT INTO EventLogs(EventName, EventData, Exchange, RoutingKey, CreatedAt)
+    VALUES(@EventName, @EventData, @Exchange, @RoutingKey, GETDATE())
+END
+
+*******/
+
+INSERT INTO JobTypes (JobTypeName) VALUES
+	('Backend Developer'),
+	('Frontend Developer'),
+	('Full Stack Developer'),
+	('Mobile Developer'),
+	('DevOps Engineer'),
+	('Cloud Engineer'),
+	('Data Scientist'),
+	('Data Analyst'),
+	('Machine Learning Engineer'),
+	('Systems Administrator'),
+	('Database Administrator'),
+	('Security Engineer'),
+	('Technical Lead'),
+	('Engineering Manager'),
+	('Product Manager'),
+	('UI/UX Designer'),
+	('Solutions Architect'),
+	('IT Consultant'),
+	('Technical Support Specialist');
+
+INSERT INTO Roles(RoleName) 
+VALUES('Recruiter'),('Applicant');
+
+--; passHash nUrT/5WpKOi/inSmWr9jgtjItwEYp8gDgwgEXtVy2JokVbhxTT5vDVxYCmbRNj8H
+--; pass 12341234
 INSERT INTO Users(IdRole, FirstName, LastName, Email, PasswordHash, CreationDate, IsActive, IsRegistrationConfirmed, RegistrationConfirmedAt)
-VALUES	(1,'Alice','Liddel','alice@fake.com','12341234',GETDATE(),0,0, GETDATE())
-		--(1,'Karla','Fuentes Nolasco','karla.fuente@fake.com','12341234',GETDATE(),0,0, GETDATE()),
-		--(1,'Oscar','Kala Haak','oscar.kala@fake.com','12341234',GETDATE(),0,0, GETDATE()),
-		--(1,'Maria','Torres','maria.torres@fake.com','12341234',GETDATE(),0,0, GETDATE()),
-		--(2,'Xaime','Weir Rojo','xaime.rojo@fake.com','12341234',GETDATE(),0,0, GETDATE()),
-		--(2,'Adriana','Fernandez','adriana.fernandez@fake.com','12341234',GETDATE(),0,0, GETDATE()),
-		--(2,'Ingrid','Xodar Jimenez','ingrid.xodar@fake.com','12341234',GETDATE(),0,0, GETDATE()),
-		--(2,'Berenice','Ximo Quezada','berenice.ximo@fake.com','12341234',GETDATE(),0,0, GETDATE()),
-		--(2,'Rodrigo','Kitia Castro','rodrigo.kitia@fake.com','12341234',GETDATE(),0,0, GETDATE()),
-		--(1,'Vladimir','Nikolaev Ivanov','vladimir.ivanov@fake.com','12341234',GETDATE(),0,0, GETDATE()),
-		--(2,'Greta','Baumann Richter','greta.richter@fake.com','12341234',GETDATE(),0,0, GETDATE()),
-		--(1,'Jessica','Johnson Castillo','jessica.johnson@fake.com','12341234',GETDATE(),0,0, GETDATE()),
-		--(2,'Anastacia','Sokilova Braun','anastacia.braun@fake.com','12341234',GETDATE(),0,0, GETDATE()),
-		--(1,'Michel','Johnsson Figueroa','michel.johnsson@fake.com','12341234',GETDATE(),0,0, GETDATE()),
-		--(1,'Castro','Kennedy Schmitt','castro.kennedy@fake.com','12341234',GETDATE(),0,0, GETDATE()),
-		--(2,'Jorge','Lopez Fernandez','jorge.lopez@fake.com','12341234',GETDATE(),0,0, GETDATE()),
-		--(1,'Klaus','Schneider Wlaker','klaus.schneider@fake.com','12341234',GETDATE(),0,0, GETDATE()),
-		--(1,'Sandra','Connor','sandra.connor@fake.com','12341234',GETDATE(),0,0, GETDATE()),
-		--(2,'Clara','Luciani Le','clara.le@fake.com','12341234',GETDATE(),0,0, GETDATE()),
-		--(1,'William','Wisher Jr','william.wisher@fake.com','12341234',GETDATE(),0,0, GETDATE()),
-		--(1,'Franco','Columbu Bess','franco.columbu@fake.com','12341234',GETDATE(),0,0, GETDATE()),
-		--(2,'Anna','Romanova Kuznetsova','anna.romanova@fake.com','12341234',GETDATE(),0,0, GETDATE()),
-		--(1,'Fritz','Fisher Weber','fritz.fisher@fake.com','12341234',GETDATE(),0,0, GETDATE()),
-		--(1,'Maria','Garcia Lopez','maria.garcia@fake.com','12341234',GETDATE(),0,0, GETDATE()),
-		--(1,'Olga','Hernandez Ramirez','olga.hernandez@fake.com','12341234',GETDATE(),0,0, GETDATE()),
-		--(2,'Antonio','Ramirez Acu a','antonio.ramirez@fake.com','12341234',GETDATE(),0,0, GETDATE()),
-		--(1,'Emilio','Gonzales','emilio.gonzales@fake.com','12341234',GETDATE(),0,0, GETDATE()),
-		--(2,'Sofia','Salazar Hernandez','sofia.salazar@fake.com','12341234',GETDATE(),0,0, GETDATE()),
-		--(1,'Hans','Mueller Schmidt','hans.mueller@fake.com','12341234',GETDATE(),0,0, GETDATE()),
-		--(2,'John','Cena Johnson','john.cena@fake.com','12341234',GETDATE(),0,0, GETDATE()),
-		--(1,'Rosa','Delgadillo Paredes','rosa.delgadillo@fake.com','12341234',GETDATE(),0,0, GETDATE()),
-		--(1,'Pedro','Aguilar Rojas','pedro.agular@fake.com','12341234',GETDATE(),0,0, GETDATE()),
-		--(1,'Alejandro','Rivera Vargas','alejandro.rivera@fake.com','12341234',GETDATE(),0,0, GETDATE()),
-		--(2,'Jose','Alfredo Jimenez','jose.alfredo@fake.com','12341234',GETDATE(),0,0, GETDATE()),
-		--(1,'Elena','Mendoza Castro','elena.mendoza@fake.com','12341234',GETDATE(),0,0, GETDATE()),
-		--(1,'Lucia','Rivera Garcia','lucia.rivera@fake.com','12341234',GETDATE(),0,0, GETDATE()),
-		--(2,'Laura','Morales Dias','laura.dias@fake.com','12341234',GETDATE(),0,0, GETDATE()),
-		--(1,'Wagner','Mozart Bach','wagner.mozart@fake.com','12341234',GETDATE(),0,0, GETDATE()),
-		--(1,'Darwin','Walker','darwin.walker@fake.com','12341234',GETDATE(),0,0, GETDATE()),
-		--(1,'Anna','petrova Ivanova','anna.petrova@fake.com','12341234',GETDATE(),0,0, GETDATE()),
-		--(2,'Jessica','Kinolev Smith','jessica.kinolev@fake.com','12341234',GETDATE(),0,0, GETDATE()),
-		--(1,'Ivano','Thompson Weber','ivano.thompson@fake.com','12341234',GETDATE(),0,0, GETDATE()),
-		--(1,'Elena','Romero Morales','elena.romero@fake.com','12341234',GETDATE(),0,0, GETDATE()),
-		--(2,'Juan','Hernandez Hernandez','juan.hernandez@fake.com','12341234',GETDATE(),0,0, GETDATE()),
-		--(1,'Sofia','Silva','sofia.silva@fake.com','12341234',GETDATE(),0,0, GETDATE())
-	
+VALUES	(1,'Alice','Liddel','alice@fake.com','nUrT/5WpKOi/inSmWr9jgtjItwEYp8gDgwgEXtVy2JokVbhxTT5vDVxYCmbRNj8H',GETDATE(),0,0, NULL),	--; recruiter
+		(2,'Jon','Snow','jon@fake.com','EzkhpOq+qxqGMaVyzCj+EbWANkMKXoKmnm4xFNnjXPT0LO6iLpHexCYqjymv6JG9',GETDATE(),0,0, NULL);	--; applicant
+
+INSERT INTO Publications( IdUser, IdRole, Title, Description, PublicationDate, ExpirationDate, Status, Salary, Location, Company, IdJobType)
+VALUES(1,1, 'Backend Developer Position', 'Looking ofr an experienced Backend Developer with knowledge of .NET', GETDATE(), DATEADD(MONTH, 1, GETDATE()), 1, 21000.00, 'Mexico City', 'OCP',1),
+	(1,1, 'Frontend Developer Position', 'Seeking a skilled Frontend Developer with experience in Angular and TypeScript', GETDATE(), DATEADD(MONTH, 1, GETDATE()), 1, 70000.00, 'San Francisco', 'OCP',2),
+	(1,1, 'Data Scientist Role', 'Hiring a Data Scientist with knowledge of Python and Machine Learning', GETDATE(), DATEADD(MONTH, 1, GETDATE()), 1, 23500.00, 'Mexico City', 'OCP', 3)
+
+/**
+DECLARE @MinSalary DECIMAL = 10000
+DECLARE @MaxSalary DECIMAL = 30000
+DECLARE @Location VARCHAR(100) = 'Mexico City'
+DECLARE @JobType NVARCHAR(100) = 'Backend Developer'
+DECLARE @Keyword NVARCHAR(100) = 'Backend'
+
+SELECT p.IdPublication, p.Title, p.Description, p.Salary, p.Location, t.JobTypeName, p.Company
+FROM Publications p (NOLOCK)
+INNER JOIN 
+	JobTypes t ON p.IdJobType = t.IdJobType
+WHERE (p.Salary BETWEEN @MinSalary AND @MaxSalary OR (@MinSalary IS NULL AND @MaxSalary IS NULL))
+	AND (p.Location = @Location OR @Location IS NULL)
+	AND (t.JobTypeName = @JobType OR @JobType IS NULL)
+	AND (p.Title LIKE '%' + @Keyword + '%' OR @Keyword IS NULL)
+	AND p.Status = 1;
+	**/
+
+INSERT INTO SelectionProcess(IdPublication, IdApplicant, ApplicationStatus, ApplicationDate)
+VALUES(1, 2, 'Applied', GETDATE());
+
+INSERT INTO SearchJobs(IdUser, IdJobType, SearchQuery, SearchDate, Location, MinSalary, MaxSalary)
+VALUES(2, 1, 'Backend', GETDATE(), 'Mexico City', 10000, 30000);
+
+--select IdUser, email, IsActive, IsRegistrationConfirmed from users
+
+

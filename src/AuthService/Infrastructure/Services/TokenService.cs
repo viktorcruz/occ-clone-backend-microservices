@@ -43,7 +43,7 @@ namespace AuthService.Infrastructure.Services
 
             var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
-            var expiration = DateTime.UtcNow.AddHours(1);
+            var expiration = DateTime.UtcNow.AddHours(13);
 
             var token = new JwtSecurityToken(
                 issuer: _issuer, 
