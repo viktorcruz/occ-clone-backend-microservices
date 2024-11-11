@@ -3,7 +3,7 @@ using Microsoft.IdentityModel.Tokens;
 using SharedKernel.Helpers;
 using System.Text;
 
-namespace SearchJobsServcie.Modules.Authentication
+namespace SearchJobsService.Modules.Authentication
 {
     public static class Authentication
     {

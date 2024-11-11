@@ -1,9 +1,9 @@
-﻿using System.Data;
+﻿//using System.Data;
 
-namespace PublicationsService.Persistence.Interface
-{
-    public interface IDbConnectionFactory
-    {
-        IDbConnection GetConnection(string connectionName);
-    }
-}
+//namespace PublicationsService.Persistence.Interface
+//{
+//    public interface IDbConnectionFactory
+//    {
+//        IDbConnection GetConnection(string connectionName);
+//    }
+//}

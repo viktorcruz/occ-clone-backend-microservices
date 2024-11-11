@@ -1,10 +1,9 @@
 ﻿using Dapper;
-using Microsoft.VisualStudio.Web.CodeGenerators.Mvc.Templates.Blazor;
 using PublicationsService.Aplication.Commands;
 using PublicationsService.Aplication.Dto;
 using PublicationsService.Application.Dto;
 using PublicationsService.Infrastructure.Interface;
-using PublicationsService.Persistence.Interface;
+using SharedKernel.Common.Interfaces;
 using SharedKernel.Common.Responses;
 using SharedKernel.Interface;
 
@@ -14,14 +13,14 @@ namespace PublicationsService.Infrastructure.Repository
     {
         #region Properties
         private readonly string OCC_Connection = "OCC_Connection";
-        private readonly IDbConnectionFactory _connectionFactory;
+        private readonly ISqlServerConnectionFactory _sqlServerConnection;
         private readonly IGlobalExceptionHandler _globalExceptionHandler;
         #endregion
 
         #region Constructor
-        public PublicationRepository(IDbConnectionFactory connectionFactory, IGlobalExceptionHandler globalExceptionHandler)
+        public PublicationRepository(ISqlServerConnectionFactory sqlServerConnection, IGlobalExceptionHandler globalExceptionHandler)
         {
-            _connectionFactory = connectionFactory;
+            _sqlServerConnection = sqlServerConnection;
             _globalExceptionHandler = globalExceptionHandler;
         }
         #endregion
@@ -30,7 +29,7 @@ namespace PublicationsService.Infrastructure.Repository
         #region Methods
         public async Task<DatabaseResult> CreatePublicationAsync(CreatePublicationCommand command)
         {
-            using (var connection = _connectionFactory.GetConnection(OCC_Connection))
+            using (var connection = _sqlServerConnection.GetConnection(OCC_Connection))
             {
                 connection.Open();
 
@@ -50,6 +49,7 @@ namespace PublicationsService.Infrastructure.Repository
                         parameters.Add("@Salary", command.Salary);
                         parameters.Add("@Location", command.Location);
                         parameters.Add("@Company", command.Company);
+                        parameters.Add("@IdJobType", command.IdJobType);
 
                         var results = await connection.QuerySingleAsync<DatabaseResult>(
                             query,
@@ -94,7 +94,7 @@ namespace PublicationsService.Infrastructure.Repository
 
         public async Task<RetrieveDatabaseResult<PublicationRetrieveDTO>> GetPublicationByIdAsync(int publicationId)
         {
-            using (var connection = _connectionFactory.GetConnection(OCC_Connection))
+            using (var connection = _sqlServerConnection.GetConnection(OCC_Connection))
             {
                 try
                 {
@@ -153,7 +153,7 @@ namespace PublicationsService.Infrastructure.Repository
         {
             try
             {
-                using (var connection = _connectionFactory.GetConnection(OCC_Connection))
+                using (var connection = _sqlServerConnection.GetConnection(OCC_Connection))
                 {
                     connection.Open();
 
@@ -206,7 +206,7 @@ namespace PublicationsService.Infrastructure.Repository
 
         public async Task<DatabaseResult> UpdatePublicationAsync(PublicationUpdateDTO publicationDTO)
         {
-            using (var connection = _connectionFactory.GetConnection(OCC_Connection))
+            using (var connection = _sqlServerConnection.GetConnection(OCC_Connection))
             {
                 connection.Open();
 
@@ -229,7 +229,7 @@ namespace PublicationsService.Infrastructure.Repository
 
                         transaction.Commit();
 
-                        if(results != null)
+                        if (results != null)
                         {
                             return results;
                         }
@@ -273,7 +273,7 @@ namespace PublicationsService.Infrastructure.Repository
 
         public async Task<DatabaseResult> DeletePublicationByIdAsync(int publicationId)
         {
-            using (var connection = _connectionFactory.GetConnection(OCC_Connection))
+            using (var connection = _sqlServerConnection.GetConnection(OCC_Connection))
             {
                 connection.Open();
 
@@ -300,7 +300,7 @@ namespace PublicationsService.Infrastructure.Repository
                     {
                         transaction.Rollback();
                         _globalExceptionHandler.HandleGenericException<string>(ex, "PublicationRepository.DeletePublicationAsync");
-                        return new DatabaseResult();
+                        return new DatabaseResult { ResultStatus = false };
                     }
                     finally
                     {

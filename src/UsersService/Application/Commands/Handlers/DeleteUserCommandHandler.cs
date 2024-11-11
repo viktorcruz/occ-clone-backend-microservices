@@ -1,8 +1,7 @@
 ﻿using MediatR;
+using SharedKernel.Common.Interfaces;
 using SharedKernel.Interface;
-using UsersService.Domain.Events;
 using UsersService.Domain.Interface;
-using UsersService.Infrastructure.Messaging;
 
 namespace UsersService.Application.Commands.Handlers
 {
@@ -12,7 +11,8 @@ namespace UsersService.Application.Commands.Handlers
         private readonly IUserDomain _usersDomain;
         private readonly IGlobalExceptionHandler _globalExceptionHandler;
         private readonly IEndpointResponse<IDatabaseResult> _endpointResponse;
-        private readonly EventBusRabbitMQ _eventBus;
+        private readonly IEventBus _eventBus;
+        private readonly IEntityOperationEventFactory _entityOperationEventFactory;
         #endregion
 
         #region Constructor
@@ -20,13 +20,15 @@ namespace UsersService.Application.Commands.Handlers
             IUserDomain usersDomain,
             IGlobalExceptionHandler globalExceptionHandler,
             IEndpointResponse<IDatabaseResult> endpointResponse,
-            EventBusRabbitMQ eventBus
+            IEventBus eventBus,
+            IEntityOperationEventFactory entityOperationEventFactory
             )
         {
             _usersDomain = usersDomain;
             _globalExceptionHandler = globalExceptionHandler;
             _endpointResponse = endpointResponse;
             _eventBus = eventBus;
+            _entityOperationEventFactory = entityOperationEventFactory;
         }
         #endregion
 
@@ -50,7 +52,7 @@ namespace UsersService.Application.Commands.Handlers
                         IsDeleted = true
                     };
 
-                    var entityOperationEvent = new EntityOperationEvent(
+                    var eventInstance = _entityOperationEventFactory.CreateEvent(
                         entityName: "User",
                         operationType: "Delete",
                         success: true,
@@ -59,8 +61,7 @@ namespace UsersService.Application.Commands.Handlers
                         additionalData: additionalData
                         );
 
-                    _eventBus.Publish("UserExchange", "UserDeletedEvent", entityOperationEvent);
-
+                    _eventBus.Publish("user_exchange", "user.deleted", eventInstance);
                 }
                 else
                 {
@@ -74,9 +75,15 @@ namespace UsersService.Application.Commands.Handlers
                 _endpointResponse.IsSuccess = false;
                 _endpointResponse.Message = $"Error deleting user: {ex.Message}";
 
-                var failedEvent = new EntityOperationEvent(entityName: "User", operationType: "Delete", success: false, performedBy: "AdminUser");
-
-                _eventBus.Publish("UserExchange", "UserDeletedFailed", failedEvent);
+                var failedEvent = _entityOperationEventFactory.CreateEvent(
+                    entityName: "User",
+                    operationType: "Delete",
+                    success: true,
+                    performedBy: "Admin",
+                    reason: ex.Message,
+                    additionalData: null
+                    );
+                _eventBus.Publish("user_exchange", "user.deleted.failed", failedEvent);
 
             }
             return _endpointResponse;

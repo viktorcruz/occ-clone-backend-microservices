@@ -1,39 +1,38 @@
 ﻿using MediatR;
+using SharedKernel.Common.Extensions;
 using SharedKernel.Common.Responses;
 using SharedKernel.Interface;
 using UsersService.Application.Dto;
-using UsersService.Domain.Events;
 using UsersService.Domain.Interface;
-using UsersService.Infrastructure.Messaging;
 
 namespace UsersService.Application.Queries.Handlers
 {
-    public class SearchUsersQueryHandler : IRequestHandler<SearchUsersQuery, IEndpointResponse<RetrieveDatabaseResult<List<UserRetrieveDTO>>>>
+    public class SearchUsersQueryHandler : IRequestHandler<SearchUsersQuery, IEndpointResponse<RetrieveDatabaseResult<List<SearchUsersDTO>>>>
     {
         #region Properties
         private readonly IUserDomain _userDomain;
         private readonly IGlobalExceptionHandler _globalExceptionHandler;
-        private readonly IEndpointResponse<RetrieveDatabaseResult<List<UserRetrieveDTO>>> _endpointResponse;
-        private readonly EventBusRabbitMQ _eventBus;
+        private readonly IEndpointResponse<RetrieveDatabaseResult<List<SearchUsersDTO>>> _endpointResponse;
+        private readonly IEventPublisherService _eventPublisherService;
         #endregion
 
         #region Constructor
         public SearchUsersQueryHandler(
             IUserDomain userDomain,
             IGlobalExceptionHandler globalExceptionHandler,
-            IEndpointResponse<RetrieveDatabaseResult<List<UserRetrieveDTO>>> endpointResponse,
-            EventBusRabbitMQ eventBus
+            IEndpointResponse<RetrieveDatabaseResult<List<SearchUsersDTO>>> endpointResponse,
+            IEventPublisherService eventPublisherService
             )
         {
             _userDomain = userDomain;
             _globalExceptionHandler = globalExceptionHandler;
             _endpointResponse = endpointResponse;
-            _eventBus = eventBus;
+            _eventPublisherService = eventPublisherService;
         }
         #endregion
 
         #region Methods
-        public async Task<IEndpointResponse<RetrieveDatabaseResult<List<UserRetrieveDTO>>>> Handle(SearchUsersQuery request, CancellationToken cancellationToken)
+        public async Task<IEndpointResponse<RetrieveDatabaseResult<List<SearchUsersDTO>>>> Handle(SearchUsersQuery request, CancellationToken cancellationToken)
         {
             try
             {
@@ -60,21 +59,32 @@ namespace UsersService.Application.Queries.Handlers
                         Email = request.Email,
                     };
 
-                    var entityOperationEvent = new EntityOperationEvent(
+                    await _eventPublisherService.PublishEventAsync(
                         entityName: "User",
-                        operationType: "Search",
+                        operationType: "SEARCH",
                         success: true,
                         performedBy: "Admin",
-                        reason: response.ResultStatus.ToString(),
-                        additionalData: additionalData
+                        reason: response?.ResultMessage ?? "User not found",
+                        additionalData: additionalData,
+                        exchangeName: PublicationExchangeNames.Users.ToExchangeName(),
+                        routingKey: PublicationRoutingKeys.Search_Success.ToRoutingKey()
                         );
-
-                    _eventBus.Publish("UserExchange", "UserSearched", entityOperationEvent);
                 }
                 else
                 {
                     _endpointResponse.IsSuccess = false;
                     _endpointResponse.Message = "No users found";
+
+                    await _eventPublisherService.PublishEventAsync(
+                        entityName: "User",
+                        operationType: "SEARCH",
+                        success: false,
+                        performedBy: "Admin",
+                        reason: response?.ResultMessage ?? "Data not found",
+                        additionalData: response,
+                        exchangeName: PublicationExchangeNames.Users.ToExchangeName(),
+                        routingKey: PublicationRoutingKeys.Search_Failed.ToRoutingKey()
+                        );
                 }
             }
             catch (Exception ex)
@@ -83,9 +93,16 @@ namespace UsersService.Application.Queries.Handlers
                 _endpointResponse.IsSuccess = false;
                 _endpointResponse.Message = ex.Message;
 
-                var failedEvent = new EntityOperationEvent(entityName: "User", operationType: "Search", success: false, performedBy: "AdminUser");
-
-                _eventBus.Publish("UserExchange", "SearchUsersFailed", failedEvent);
+                await _eventPublisherService.PublishEventAsync(
+                    entityName: "User",
+                    operationType: "SEARCH",
+                    success: true,
+                    performedBy: "Admin",
+                    reason: "User not found",
+                    additionalData: null,
+                    exchangeName: PublicationExchangeNames.Users.ToExchangeName(),
+                    routingKey: PublicationRoutingKeys.Search_Error.ToRoutingKey()
+                    );
             }
 
             return _endpointResponse;

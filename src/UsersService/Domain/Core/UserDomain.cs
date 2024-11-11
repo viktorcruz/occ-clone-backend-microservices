@@ -32,7 +32,7 @@ namespace UsersService.Domain.Core
             return await _userRepository.GetAllUsersAsync();
         }
 
-        public async Task<RetrieveDatabaseResult<List<UserRetrieveDTO>>> SearchUsersAsync(string firstName, string lastName, string email)
+        public async Task<RetrieveDatabaseResult<List<SearchUsersDTO>>> SearchUsersAsync(string firstName, string lastName, string email)
         {
             return await _userRepository.SearchUsersAsync(firstName, lastName, email);
         }

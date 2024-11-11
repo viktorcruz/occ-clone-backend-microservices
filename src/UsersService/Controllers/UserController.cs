@@ -173,68 +173,6 @@ namespace UsersService.Controllers
             }
         }
 
-        [HttpPut("{userId}/confirm-registration")]
-        public async Task<IActionResult> ConfirmUserRegistration(int userId)
-        {
-            try
-            {
-
-                var command = new ConfirmUserRegistrationCommand(userId);
-                var endpointResponse = await _mediator.Send(command);
-                if (endpointResponse.IsSuccess)
-                {
-                    return Ok(endpointResponse);
-                }
-                return BadRequest(endpointResponse);
-            }
-            catch (Exception ex)
-            {
-                _globalExceptionHandler.HandleGenericException<string>(ex, "UserController.ConfirmUserRegistration");
-                return StatusCode(500);
-            }
-        }
-
-        [HttpPut("{userId}/deactivate-user")]
-        public async Task<IActionResult> DeactivateUser(int userId)
-        {
-            try
-            {
-                var command = new DeactivateUserCommand(userId);
-                var endpointResponse = await _mediator.Send(command);
-                if (endpointResponse.IsSuccess)
-                {
-                    return Ok(endpointResponse);
-                }
-                return BadRequest(endpointResponse);
-            }
-            catch (Exception ex)
-            {
-                _globalExceptionHandler.HandleGenericException<string>(ex, "UserController.DeactivateUser");
-                return StatusCode(500);
-            }
-        }
-
-        [HttpPut("{userId}/activate-user")]
-        public async Task<IActionResult> ActivateUser(int userId)
-        {
-            try
-            {
-                var command = new ActivateUserCommand(userId);
-                var endpointResponse = await _mediator.Send(command);
-                if (endpointResponse.IsSuccess)
-                {
-                    return Ok(endpointResponse);
-                }
-                return BadRequest(endpointResponse);
-            }
-            catch (Exception ex)
-            {
-                _globalExceptionHandler.HandleGenericException<string>(ex, "UserController.ActivateUser");
-                return StatusCode(500);
-            }
-        }
-
-
         [HttpDelete("{userId}")]
         public async Task<IActionResult> DeleteUserById(int userId)
         {

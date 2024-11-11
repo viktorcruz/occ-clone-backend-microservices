@@ -1,8 +1,6 @@
 ﻿using MediatR;
-using PublicationsService.Aplication.Dto;
-using PublicationsService.Domain.Events;
 using PublicationsService.Domain.Interface;
-using PublicationsService.Infrastructure.Messaging;
+using SharedKernel.Common.Extensions;
 using SharedKernel.Interface;
 
 namespace PublicationsService.Aplication.Commands.Handlers
@@ -11,26 +9,23 @@ namespace PublicationsService.Aplication.Commands.Handlers
     {
         #region Properties
         private readonly IPublicationDomain _publicationDomain;
+        private readonly IEventPublisherService _eventPublisherService;
         private readonly IGlobalExceptionHandler _globalExceptionHandler;
         private readonly IEndpointResponse<IDatabaseResult> _endpointResponse;
-        private readonly IEventBus _eventBus;
-        private readonly IEntityOperationEventFactory _entityOperationEventFactory;
         #endregion
 
         #region Constructor
         public CreatePublicationCommandHandler(
             IPublicationDomain publicationDomain,
+            IEventPublisherService eventPublisherService,
             IGlobalExceptionHandler globalExceptionHandler,
-            IEndpointResponse<IDatabaseResult> endpointResponse,
-            IEventBus eventBus,
-            IEntityOperationEventFactory entityOperationEventFactory
+            IEndpointResponse<IDatabaseResult> endpointResponse
             )
         {
             _publicationDomain = publicationDomain;
+            _eventPublisherService = eventPublisherService;
             _globalExceptionHandler = globalExceptionHandler;
             _endpointResponse = endpointResponse;
-            _eventBus = eventBus;
-            _entityOperationEventFactory = entityOperationEventFactory;
         }
         #endregion
 
@@ -60,21 +55,32 @@ namespace PublicationsService.Aplication.Commands.Handlers
                         Location = request.Location,
                     };
 
-                    var eventInstance = _entityOperationEventFactory.CreateEvent(
+                    await _eventPublisherService.PublishEventAsync(
                         entityName: "Publication",
-                        operationType: "Create",
+                        operationType: "CREATE",
                         success: true,
                         performedBy: "Admin",
-                        reason: response.ResultStatus.ToString(),
-                        additionalData: additionalData
+                        reason: response?.ResultMessage,
+                        additionalData: additionalData,
+                        "publication_exchange",
+                        "publication.created"
                         );
-
-                    _eventBus.Publish("PublicationExchange", "PublicationCreated", eventInstance);
                 }
                 else
                 {
                     _endpointResponse.IsSuccess = false;
-                    _endpointResponse.Message = response?.ResultMessage ?? "Publication not ncreated";
+                    _endpointResponse.Message = response?.ResultMessage ?? "Publication not created";
+
+                    await _eventPublisherService.PublishEventAsync(
+                        entityName: "Publication",
+                        operationType: "CREATE",
+                        success: false,
+                        performedBy: "Admin",
+                        reason: response?.ResultMessage,
+                        additionalData: null,
+                        exchangeName: PublicationExchangeNames.Publication.ToExchangeName(),
+                        routingKey: PublicationRoutingKeys.Insert_Failed.ToRoutingKey()
+                        );
                 }
             }
             catch (Exception ex)
@@ -84,16 +90,16 @@ namespace PublicationsService.Aplication.Commands.Handlers
                 _endpointResponse.IsSuccess = false;
                 _endpointResponse.Message = $"Error creating publication: {ex.Message}";
 
-                var failedEvent = new EntityOperationEvent(
+                await _eventPublisherService.PublishEventAsync(
                     entityName: "Publication",
-                    operationType: "Create",
+                    operationType: "CREATE",
                     success: false,
-                    performedBy: "AdminUser",
+                    performedBy: "Admin",
                     reason: ex.Message,
-                    additionalData: null
+                    additionalData: null,
+                    exchangeName: PublicationExchangeNames.Publication.ToExchangeName(),
+                    routingKey: PublicationRoutingKeys.Insert_Error.ToRoutingKey()
                     );
-
-                _eventBus.Publish("PublicationExchance", "PublicationCreateFailed", failedEvent);
             }
 
             return _endpointResponse;

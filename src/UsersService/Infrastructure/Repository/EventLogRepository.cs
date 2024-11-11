@@ -1,32 +1,31 @@
 ﻿using System.Data;
-using UsersService.Infrastructure.Interface;
-using UsersService.Persistence.Interface;
 using Dapper;
 using SharedKernel.Interface;
+using SharedKernel.Common.Interfaces;
 
 namespace UsersService.Infrastructure.Repository
 {
     public class EventLogRepository : IEventLogRepository
     {
-        private readonly IDbConnectionFactory _connectionFactory;
+        private readonly ISqlServerConnectionFactory _sqlServerConnection;
         private readonly string OCC_Connection = "OCC_Connection";
         private readonly IGlobalExceptionHandler _globalExceptionHandler;
         private readonly IDapperExecutor _dapperExecutor;
 
         public EventLogRepository(
-            IDbConnectionFactory connectionFactory,
+            ISqlServerConnectionFactory sqlServerConnection,
             IGlobalExceptionHandler globalExceptionHandler,
             IDapperExecutor dapperExecutor
         )
         {
-            _connectionFactory = connectionFactory;
+            _sqlServerConnection = sqlServerConnection;
             _globalExceptionHandler = globalExceptionHandler;
             _dapperExecutor = dapperExecutor;
         }
 
         public async Task SaveEventLog(string query, DynamicParameters parameters)
         {
-            using (var connection = _connectionFactory.GetConnection(OCC_Connection))
+            using (var connection = _sqlServerConnection.GetConnection(OCC_Connection))
             {
                 connection.Open();
                 using (var transaction = connection.BeginTransaction())

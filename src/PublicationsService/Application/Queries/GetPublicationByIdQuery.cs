@@ -12,10 +12,10 @@ namespace PublicationsService.Aplication.Queries
         #endregion
 
         #region Constructor
-        public GetPublicationByIdQuery(int idPublication)
+        public GetPublicationByIdQuery(int publicationId)
         {
 
-            IdPublication = idPublication;
+            IdPublication = publicationId;
 
         }
         #endregion

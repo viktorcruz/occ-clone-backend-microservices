@@ -2,6 +2,8 @@
 using PublicationsService.Aplication.Dto;
 using PublicationsService.Application.Dto;
 using PublicationsService.Domain.Interface;
+using SharedKernel.Common.Extensions;
+using SharedKernel.Common.Interfaces;
 using SharedKernel.Interface;
 
 namespace PublicationsService.Aplication.Commands.Handlers
@@ -10,6 +12,7 @@ namespace PublicationsService.Aplication.Commands.Handlers
     {
         #region Properties
         private readonly IPublicationDomain _publicationDomain;
+        private readonly IEventPublisherService _eventPublisherService;
         private readonly IGlobalExceptionHandler _globalExceptionHandler;
         private readonly IEndpointResponse<IDatabaseResult> _endpointResponse;
         private readonly IEventBus _eventBus;
@@ -18,14 +21,16 @@ namespace PublicationsService.Aplication.Commands.Handlers
 
         #region Constructor
         public UpdatePublicationCommandHandler(
-            IPublicationDomain publicationDomain, 
-            IGlobalExceptionHandler globalExceptionHandler, 
+            IPublicationDomain publicationDomain,
+            IEventPublisherService eventPublisherService,
+            IGlobalExceptionHandler globalExceptionHandler,
             IEndpointResponse<IDatabaseResult> endpointResponse,
             IEventBus eventBus,
             IEntityOperationEventFactory entityOperationEventFactory
             )
         {
             _publicationDomain = publicationDomain;
+            _eventPublisherService = eventPublisherService;
             _globalExceptionHandler = globalExceptionHandler;
             _endpointResponse = endpointResponse;
             _eventBus = eventBus;
@@ -54,25 +59,37 @@ namespace PublicationsService.Aplication.Commands.Handlers
                 var response = await _publicationDomain.UpdatePublicationAsync(publication);
                 _endpointResponse.Result = response;
 
-                if(response != null && response.ResultStatus)
+                if (response != null && response.ResultStatus)
                 {
                     _endpointResponse.IsSuccess = true;
                     _endpointResponse.Message = "Publication updated successful";
 
-                    var entityInstance = _entityOperationEventFactory.CreateEvent(
+                    await _eventPublisherService.PublishEventAsync(
                         entityName: "Publication",
-                        operationType: "Update",
+                        operationType: "UPDATE",
                         success: true,
                         performedBy: "Admin",
-                        reason: response.ResultStatus.ToString(),
-                        additionalData: publication
+                        reason: response?.ResultMessage ?? "Publication not found",
+                        additionalData: publication,
+                        exchangeName: PublicationExchangeNames.Publication.ToExchangeName(),
+                        routingKey: PublicationRoutingKeys.Update_Success.ToRoutingKey()
                         );
-                    _eventBus.Publish("PublicationExchange", "PublicationUpdateEvent", entityInstance);
                 }
                 else
                 {
                     _endpointResponse.IsSuccess = false;
                     _endpointResponse.Message = response?.ResultMessage ?? "Publication not found";
+
+                    await _eventPublisherService.PublishEventAsync(
+                        entityName: "Publication",
+                        operationType: "UPDATE",
+                        success: false,
+                        performedBy: "Admin",
+                        reason: response?.ResultMessage ?? "Publication not found",
+                        additionalData: publication,
+                        exchangeName: PublicationExchangeNames.Publication.ToExchangeName(),
+                        routingKey: PublicationRoutingKeys.Update_Error.ToRoutingKey()
+                        );
                 }
             }
             catch (Exception ex)
@@ -81,15 +98,16 @@ namespace PublicationsService.Aplication.Commands.Handlers
                 _endpointResponse.IsSuccess = false;
                 _endpointResponse.Message = $"Error updating publication: {ex.Message}";
 
-                var failedEvent = _entityOperationEventFactory.CreateEvent(
+                await _eventPublisherService.PublishEventAsync(
                     entityName: "Publication",
-                    operationType: "Update",
+                    operationType: "UPDATE",
                     success: false,
                     performedBy: "Admin",
                     reason: ex.Message,
-                    additionalData: null
+                    additionalData: null,
+                    exchangeName: PublicationExchangeNames.Publication.ToExchangeName(),
+                    routingKey: PublicationRoutingKeys.Update_Error.ToRoutingKey()
                     );
-                _eventBus.Publish("PublicationExchange", "PublicationUpdateEventFailed", failedEvent);
             }
             return _endpointResponse;
         }

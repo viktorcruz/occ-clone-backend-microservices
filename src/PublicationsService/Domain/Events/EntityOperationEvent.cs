@@ -11,16 +11,16 @@ namespace PublicationsService.Domain.Events
         public string OperationType { get; set; }
         public bool Success { get; set; }
         public string Reason { get; set; }
-        public string? PerfomedBy { get; set; }
-        public object? AdditionalData { get; set; }
+        public string PerfomedBy { get; set; }
+        public object AdditionalData { get; set; }
 
         public EntityOperationEvent(
           string entityName = "DefaultEntity",
           string operationType = "DefaultOperation",
           bool success = true,
           string performedBy = "System",
-          string reason = null,
-          object additionalData = null
+          string? reason = null,
+          object? additionalData = null
       )
         {
             EntityName = entityName;

@@ -1,7 +1,7 @@
 ﻿using AutoMapper;
-using SearchJobsServcie.SharedKernel.Mapper;
+using SearchJobsService.SharedKernel.Mapper;
 
-namespace SearchJobsServcie.Modules.Mapper
+namespace SearchJobsService.Modules.Mapper
 {
     public static class MapperConfiguration
     {

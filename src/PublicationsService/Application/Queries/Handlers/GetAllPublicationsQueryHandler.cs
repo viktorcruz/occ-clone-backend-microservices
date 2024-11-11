@@ -2,6 +2,8 @@
 using PublicationsService.Aplication.Dto;
 using PublicationsService.Domain.Events;
 using PublicationsService.Domain.Interface;
+using SharedKernel.Common.Extensions;
+using SharedKernel.Common.Interfaces;
 using SharedKernel.Common.Responses;
 using SharedKernel.Interface;
 
@@ -13,8 +15,7 @@ namespace PublicationsService.Aplication.Queries.Handlers
         private readonly IPublicationDomain _publicationDomain;
         private readonly IGlobalExceptionHandler _globalExceptionHandler;
         private readonly IEndpointResponse<RetrieveDatabaseResult<List<PublicationRetrieveDTO>>> _endpointResponse;
-        private readonly IEventBus _eventBus;
-        private readonly IEntityOperationEventFactory _entityOperationEventFactory;
+        private readonly IEventPublisherService _eventPublisherService;
         #endregion
 
         #region Constructor
@@ -22,15 +23,13 @@ namespace PublicationsService.Aplication.Queries.Handlers
             IPublicationDomain publicationDomain,
             IGlobalExceptionHandler globalExceptionHandler,
             IEndpointResponse<RetrieveDatabaseResult<List<PublicationRetrieveDTO>>> endpointResponse,
-            IEventBus eventBus,
-            IEntityOperationEventFactory entityOperationEventFactory
+            IEventPublisherService eventPublisherService
             )
         {
             _publicationDomain = publicationDomain;
             _globalExceptionHandler = globalExceptionHandler;
             _endpointResponse = endpointResponse;
-            _eventBus = eventBus;
-            _entityOperationEventFactory = entityOperationEventFactory;
+            _eventPublisherService = eventPublisherService;
         }
         #endregion
 
@@ -52,21 +51,32 @@ namespace PublicationsService.Aplication.Queries.Handlers
                         TotalPublications = response.Details.Count,
                     };
 
-                    var eventInstance = _entityOperationEventFactory.CreateEvent(
+                    await _eventPublisherService.PublishEventAsync(
                         entityName: "Publication",
-                        operationType: "Get All",
+                        operationType: "GETALL",
                         success: true,
                         performedBy: "Admin",
-                        reason: response.ResultStatus.ToString(),
-                        additionalData: additionalData
+                        reason: response?.ResultMessage,
+                        additionalData: additionalData,
+                        exchangeName: PublicationExchangeNames.Publication.ToExchangeName(),
+                        routingKey: PublicationRoutingKeys.GetAll_Success.ToRoutingKey()
                         );
-
-                    _eventBus.Publish("PublicationExchange", "PublicationGetAllEvent", eventInstance);
                 }
                 else
                 {
                     _endpointResponse.IsSuccess = false;
                     _endpointResponse.Message = "Publications not found";
+
+                    await _eventPublisherService.PublishEventAsync(
+                        entityName: "Publication",
+                        operationType: "GETALL",
+                        success: false,
+                        performedBy: "Admin",
+                        reason: response?.ResultMessage ?? "Publications not found",
+                        additionalData: null,
+                        exchangeName: PublicationExchangeNames.Publication.ToExchangeName(),
+                        routingKey: PublicationRoutingKeys.GetAll_Failed.ToRoutingKey()
+                    );
                 }
             }
             catch (Exception ex)
@@ -75,9 +85,16 @@ namespace PublicationsService.Aplication.Queries.Handlers
                 _endpointResponse.IsSuccess = false;
                 _endpointResponse.Message = ex.Message;
 
-                var failedEvent = new EntityOperationEvent(entityName: "User", operationType: "GetAll", success: false, performedBy: "Admin");
-
-                _eventBus.Publish("PublicationExchange", "PublicationGetAllEvent", failedEvent);
+                await _eventPublisherService.PublishEventAsync(
+                    entityName: "Publication",
+                    operationType: "GETALL",
+                    success: false,
+                    performedBy: "Admin",
+                    reason: ex.Message,
+                    additionalData: null,
+                    exchangeName: PublicationExchangeNames.Publication.ToExchangeName(),
+                    routingKey: PublicationRoutingKeys.GetAll_Error.ToRoutingKey()
+                    );
             }
             return _endpointResponse;
         }

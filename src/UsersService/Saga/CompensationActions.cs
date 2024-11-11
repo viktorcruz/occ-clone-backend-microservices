@@ -1,46 +1,47 @@
-﻿using UsersService.Infrastructure.Interface;
+﻿//using UsersService.Infrastructure.Interface;
 
-namespace UsersService.Saga
-{
-    public class CompensationActions
-    {
-        #region Properties
-        private readonly IUserRepository _userRepository;
-        //private readonly IUserService _userService;
-        //private readonly IPublicationService _publicationService;
-        //private readonly ISearchJobsServcie _searchJobsServcie;
-        #endregion
+//namespace UsersService.Saga
+//{
+//    public class CompensationActions
+//    {
+//        private readonly IUserRepository _userRepository;
+//        private readonly IPublicationService _publicationService;
+//        private readonly ISearchJobsService _searchJobsService;
 
-        #region Constructor
-        public CompensationActions(IUserRepository userRepository)
-        {
-            _userRepository = userRepository;
-        }
-        #endregion
+//        public CompensationActions(
+//            IUserRepository userRepository,
+//            IPublicationService publicationService,
+//            ISearchJobsService searchJobsService
+//        )
+//        {
+//            _userRepository = userRepository;
+//            _publicationService = publicationService;
+//            _searchJobsService = searchJobsService;
+//        }
 
-        #region Methods
-        public async Task CompensateCreateUserAsync(UserSagaState sagaState)
-        {
-            // Step 3
-            if (sagaState.IsJobSearchUpdated)
-            {
-                // TODO:
-                //await _searchJobsService.DeletePublicationAsync(sagaState.IdPublication);
-            }
+//        public async Task CompensateCreateUserAsync(UserSagaContext sagaState)
+//        {
+//            if (sagaState.IsJobSearchUpdated)
+//            {
+//                // Revertir la actualización en SearchJobsService
+//                await _searchJobsService.RevertJobSearchUpdateAsync(sagaState.IdUser);
+//                sagaState.IsJobSearchUpdated = false;
+//            }
 
-            // Step 2
-            if (sagaState.IdPublication != 0)
-            {
-                // TOTO:
-                //await _publicationsService.DeletePublicationAsync(sagaState.IdPublication);
-            }
+//            if (sagaState.IdPublication != 0)
+//            {
+//                // Revertir la creación de la publicación
+//                await _publicationService.DeletePublicationAsync(sagaState.IdPublication);
+//                sagaState.IdPublication = 0;
+//            }
 
-            // Step 1
-            if (sagaState.IdUser != 0)
-            {
-                await _userRepository.DeleteUserAsync(sagaState.IdUser);
-            }
-        }
-        #endregion
-    }
-}
+//            if (sagaState.IdUser != 0)
+//            {
+//                // Revertir la creación del usuario
+//                await _userRepository.DeleteUserAsync(sagaState.IdUser);
+//                sagaState.IdUser = 0;
+//            }
+//        }
+//    }
+
+//}

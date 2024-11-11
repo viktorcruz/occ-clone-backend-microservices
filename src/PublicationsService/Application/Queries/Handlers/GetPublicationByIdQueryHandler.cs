@@ -1,8 +1,7 @@
-﻿using Azure;
-using MediatR;
+﻿using MediatR;
 using PublicationsService.Aplication.Dto;
-using PublicationsService.Domain.Events;
 using PublicationsService.Domain.Interface;
+using SharedKernel.Common.Extensions;
 using SharedKernel.Common.Responses;
 using SharedKernel.Interface;
 
@@ -14,8 +13,7 @@ namespace PublicationsService.Aplication.Queries.Handlers
         private readonly IPublicationDomain _publicationDomain;
         private readonly IGlobalExceptionHandler _globalExceptionHandler;
         private readonly IEndpointResponse<RetrieveDatabaseResult<PublicationRetrieveDTO>> _endpointResponse;
-        private readonly IEventBus _eventBus;
-        private readonly IEntityOperationEventFactory _entityOperationEventFactory;
+        private readonly IEventPublisherService _eventPublisherService;
         #endregion
 
         #region Constructor
@@ -23,15 +21,13 @@ namespace PublicationsService.Aplication.Queries.Handlers
             IPublicationDomain publicationDomain,
             IGlobalExceptionHandler globalExceptionHandler,
             IEndpointResponse<RetrieveDatabaseResult<PublicationRetrieveDTO>> endpointResponse,
-            IEventBus eventBus,
-            IEntityOperationEventFactory entityOperationEventFactory
+            IEventPublisherService eventPublisherService
             )
         {
             _publicationDomain = publicationDomain;
             _globalExceptionHandler = globalExceptionHandler;
             _endpointResponse = endpointResponse;
-            _eventBus = eventBus;
-            _entityOperationEventFactory = entityOperationEventFactory;
+            _eventPublisherService = eventPublisherService;
         }
         #endregion
 
@@ -62,21 +58,31 @@ namespace PublicationsService.Aplication.Queries.Handlers
                         Company = response.Details.Company,
                     };
 
-                    var entityInstance = _entityOperationEventFactory.CreateEvent(
+                    await _eventPublisherService.PublishEventAsync(
                         entityName: "Publication",
-                        operationType: "Get By Id",
+                        operationType: "GET",
                         success: true,
                         performedBy: "Admin",
                         reason: response.ResultMessage,
-                        additionalData: additionalData
+                        additionalData: additionalData,
+                        exchangeName: PublicationExchangeNames.Publication.ToExchangeName(),
+                        routingKey: PublicationRoutingKeys.GetAll_Success.ToRoutingKey()
                         );
-
-                    _eventBus.Publish("PublicationExchange", "GetByIdPublication", entityInstance);
                 }
                 else
                 {
                     _endpointResponse.IsSuccess = false;
                     _endpointResponse.Message = response?.ResultMessage ?? "Publication not found";
+
+                    await _eventPublisherService.PublishEventAsync(
+                        entityName: "Publication",
+                        operationType: "GET",
+                        success: false,
+                        performedBy: "Admin",
+                        additionalData: null,
+                        exchangeName: PublicationExchangeNames.Publication.ToExchangeName(),
+                        routingKey: PublicationRoutingKeys.Get_Failed.ToRoutingKey()
+                        );
                 }
             }
             catch (Exception ex)
@@ -85,15 +91,16 @@ namespace PublicationsService.Aplication.Queries.Handlers
                 _endpointResponse.IsSuccess = false;
                 _endpointResponse.Message = $"Error getting publication: {ex.Message}";
 
-                var failedEvent = _entityOperationEventFactory.CreateEvent(
+                await _eventPublisherService.PublishEventAsync(
                         entityName: "Publication",
-                        operationType: "Get By Id",
+                        operationType: "GET",
                         success: false,
                         performedBy: "Admin",
                         reason: ex.Message,
-                        additionalData: null
+                        additionalData: null,
+                        exchangeName: PublicationExchangeNames.Publication.ToExchangeName(),
+                        routingKey: PublicationRoutingKeys.Get_Error.ToRoutingKey()
                     );
-                _eventBus.Publish("PublicationExchange", "GetByIdPublicationFailed", failedEvent);
             }
             return _endpointResponse;
         }

@@ -10,6 +10,7 @@
         public decimal Salary { get; set; }
         public string Location { get; set; }
         public string Company { get; set; }
+        public int IdJobType { get; set; }
     }
 }
 

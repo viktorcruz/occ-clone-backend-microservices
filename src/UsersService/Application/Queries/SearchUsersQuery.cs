@@ -5,7 +5,7 @@ using UsersService.Application.Dto;
 
 namespace UsersService.Application.Queries
 {
-    public class SearchUsersQuery : IRequest<IEndpointResponse<RetrieveDatabaseResult<List<UserRetrieveDTO>>>>
+    public class SearchUsersQuery : IRequest<IEndpointResponse<RetrieveDatabaseResult<List<SearchUsersDTO>>>>
     {
         #region Properties
         public string FirstName { get; set; }

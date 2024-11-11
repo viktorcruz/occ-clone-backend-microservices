@@ -1,10 +1,10 @@
 ﻿using Dapper;
+using SharedKernel.Common.Interfaces;
 using SharedKernel.Common.Responses;
 using SharedKernel.Interface;
 using System.Data;
 using UsersService.Application.Dto;
 using UsersService.Infrastructure.Interface;
-using UsersService.Persistence.Interface;
 
 namespace UsersService.Infrastructure.Repository
 {
@@ -12,14 +12,14 @@ namespace UsersService.Infrastructure.Repository
     {
         #region Properties
         private readonly string OCC_Connection = "OCC_Connection";
-        private readonly IDbConnectionFactory _connectionFactory;
+        private readonly ISqlServerConnectionFactory _sqlServerConnection;
         private readonly IGlobalExceptionHandler _globalExceptionHandler;
         #endregion
 
         #region Constructor
-        public UserRepository(IDbConnectionFactory connectionFactory, IGlobalExceptionHandler globalExceptionHandler)
+        public UserRepository(ISqlServerConnectionFactory sqlServerConnection, IGlobalExceptionHandler globalExceptionHandler)
         {
-            _connectionFactory = connectionFactory;
+            _sqlServerConnection = sqlServerConnection;
             _globalExceptionHandler = globalExceptionHandler;
         }
         #endregion
@@ -27,7 +27,7 @@ namespace UsersService.Infrastructure.Repository
         #region Methods
         public async Task<DatabaseResult> CreateUserAsync(AddUserDTO userDTO)
         {
-            using (var connection = _connectionFactory.GetConnection(OCC_Connection))
+            using (var connection = _sqlServerConnection.GetConnection(OCC_Connection))
             {
                 connection.Open();
 
@@ -86,7 +86,7 @@ namespace UsersService.Infrastructure.Repository
 
         public async Task<RetrieveDatabaseResult<UserRetrieveDTO>> GetUserByIdAsync(int userId)
         {
-            using (var connection = _connectionFactory.GetConnection(OCC_Connection))
+            using (var connection = _sqlServerConnection.GetConnection(OCC_Connection))
             {
                 connection.Open();
                 try
@@ -143,7 +143,7 @@ namespace UsersService.Infrastructure.Repository
 
         public async Task<RetrieveDatabaseResult<List<UserRetrieveDTO>>> GetAllUsersAsync()
         {
-            using (var connection = _connectionFactory.GetConnection(OCC_Connection))
+            using (var connection = _sqlServerConnection.GetConnection(OCC_Connection))
             {
                 connection.Open();
                 try
@@ -198,9 +198,9 @@ namespace UsersService.Infrastructure.Repository
             }
         }
 
-        public async Task<RetrieveDatabaseResult<List<UserRetrieveDTO>>> SearchUsersAsync(string firstName, string lastName, string email)
+        public async Task<RetrieveDatabaseResult<List<SearchUsersDTO>>> SearchUsersAsync(string firstName, string lastName, string email)
         {
-            using (var connection = _connectionFactory.GetConnection(OCC_Connection))
+            using (var connection = _sqlServerConnection.GetConnection(OCC_Connection))
             {
                 connection.Open();
 
@@ -227,9 +227,9 @@ namespace UsersService.Infrastructure.Repository
                         parameters.Add("@Email", email);
                     }
 
-                    var results = await connection.QueryAsync<UserRetrieveDTO>(sql, parameters);
+                    var results = await connection.QueryAsync<SearchUsersDTO>(sql, parameters);
 
-                    return new RetrieveDatabaseResult<List<UserRetrieveDTO>>
+                    return new RetrieveDatabaseResult<List<SearchUsersDTO>>
                     {
                         Details = results.ToList(),
                         ResultStatus = true,
@@ -243,7 +243,7 @@ namespace UsersService.Infrastructure.Repository
                 catch (Exception ex)
                 {
                     _globalExceptionHandler.HandleGenericException<string>(ex, "SearchUsersAsync");
-                    return new RetrieveDatabaseResult<List<UserRetrieveDTO>>
+                    return new RetrieveDatabaseResult<List<SearchUsersDTO>>
                     {
                         Details = null,
                         ResultStatus = false,
@@ -259,7 +259,7 @@ namespace UsersService.Infrastructure.Repository
 
         public async Task<DatabaseResult> UpdateUserAsync(UserRetrieveDTO userDTO)
         {
-            using (var connection = _connectionFactory.GetConnection(OCC_Connection))
+            using (var connection = _sqlServerConnection.GetConnection(OCC_Connection))
             {
                 connection.Open();
                 using (var transaction = connection.BeginTransaction())
@@ -325,7 +325,7 @@ namespace UsersService.Infrastructure.Repository
 
         public async Task<DatabaseResult> UpdateUserProfileAsync(UserProfileDTO userProfile)
         {
-            using (var connection = _connectionFactory.GetConnection(OCC_Connection))
+            using (var connection = _sqlServerConnection.GetConnection(OCC_Connection))
             {
                 connection.Open();
                 using (var transaction = connection.BeginTransaction())
@@ -387,7 +387,7 @@ namespace UsersService.Infrastructure.Repository
 
         public async Task<DatabaseResult?> DeleteUserAsync(int userId)
         {
-            using (var connection = _connectionFactory.GetConnection(OCC_Connection))
+            using (var connection = _sqlServerConnection.GetConnection(OCC_Connection))
             {
                 connection.Open();
                 using (var transaction = connection.BeginTransaction())

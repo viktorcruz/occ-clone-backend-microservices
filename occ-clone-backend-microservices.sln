@@ -11,11 +11,11 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SharedKernel", "src\SharedK
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "UsersService.UnitTest", "tests\UsersService.UnitTest\UsersService.UnitTest.csproj", "{ABE09E80-D05C-49BE-976B-1AB3CFA9431F}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SearchJobsServcie", "src\SearchJobsServcie\SearchJobsServcie.csproj", "{3DC61D32-A2C8-4FB0-8A6A-63FFA947C9CC}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SearchJobsService", "src\SearchJobsServcie\SearchJobsService.csproj", "{3DC61D32-A2C8-4FB0-8A6A-63FFA947C9CC}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AuthService", "src\AuthService\AuthService.csproj", "{9DA70185-9B2A-4186-90E6-72DAA69094EF}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GatewayService", "src\GatewayService\GatewayService.csproj", "{2500E6CC-FD5D-4442-B65C-91BF242F2AE4}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GatewayService", "src\GatewayService\GatewayService.csproj", "{2500E6CC-FD5D-4442-B65C-91BF242F2AE4}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

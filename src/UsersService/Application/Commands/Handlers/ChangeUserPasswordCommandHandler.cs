@@ -1,4 +1,5 @@
 ﻿using MediatR;
+using SharedKernel.Common.Interfaces;
 using SharedKernel.Interface;
 
 namespace UsersService.Application.Commands.Handlers

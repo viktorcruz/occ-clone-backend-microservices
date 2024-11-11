@@ -1,9 +1,8 @@
 ﻿using MediatR;
+using SharedKernel.Common.Interfaces;
 using SharedKernel.Interface;
 using UsersService.Application.Dto;
-using UsersService.Domain.Events;
 using UsersService.Domain.Interface;
-using UsersService.Infrastructure.Messaging;
 
 namespace UsersService.Application.Commands.Handlers
 {
@@ -13,7 +12,8 @@ namespace UsersService.Application.Commands.Handlers
         private readonly IUserDomain _userDomain;
         private readonly IGlobalExceptionHandler _globalExceptionHandler;
         private readonly IEndpointResponse<IDatabaseResult> _endpointResponse;
-        private readonly EventBusRabbitMQ _eventBus;
+        private readonly IEventBus _eventBus;
+        private readonly IEntityOperationEventFactory _entityOperationEventFactory;
         #endregion
 
         #region Constructor
@@ -21,12 +21,15 @@ namespace UsersService.Application.Commands.Handlers
             IUserDomain userDomain,
             IGlobalExceptionHandler globalExceptionHandler,
             IEndpointResponse<IDatabaseResult> endpointResponse,
-            EventBusRabbitMQ eventBus)
+            IEventBus eventBus,
+            IEntityOperationEventFactory entityOperationEventFactory
+            )
         {
             _userDomain = userDomain;
             _globalExceptionHandler = globalExceptionHandler;
             _endpointResponse = endpointResponse;
             _eventBus = eventBus;
+            _entityOperationEventFactory = entityOperationEventFactory;
         }
         #endregion
 
@@ -59,7 +62,7 @@ namespace UsersService.Application.Commands.Handlers
                         Email = userProfile.Email
                     };
 
-                    var entityOperationEvent = new EntityOperationEvent(
+                    var eventInstance = _entityOperationEventFactory.CreateEvent(
                         entityName: "User",
                         operationType: "Update Profile",
                         success: true,
@@ -68,8 +71,7 @@ namespace UsersService.Application.Commands.Handlers
                         additionalData: additionalData
                         );
 
-                    _eventBus.Publish("UserExchange", "UserUpdatedProfileEvent", entityOperationEvent);
-
+                    _eventBus.Publish("user_exchange", "user.updated_profile", eventInstance);
                 }
                 else
                 {
@@ -83,9 +85,15 @@ namespace UsersService.Application.Commands.Handlers
                 _endpointResponse.IsSuccess = false;
                 _endpointResponse.Message = $"Error updating profile: {ex.Message}";
 
-                var failedEvent = new EntityOperationEvent(entityName: "User", operationType: "UpdateProfile", success: false, performedBy: "AdminUser");
-
-                _eventBus.Publish("UserExchange", "UserUpdateProfileFailed", failedEvent);
+                var failedEvent = _entityOperationEventFactory.CreateEvent(
+                    entityName: "User",
+                    operationType: "Update Profile",
+                    success: true,
+                    performedBy: "Admin",
+                    reason: ex.Message,
+                    additionalData: null
+                    );
+                _eventBus.Publish("user_exchange", "user.updated_profile.failed", failedEvent);
             }
             return _endpointResponse;
         }

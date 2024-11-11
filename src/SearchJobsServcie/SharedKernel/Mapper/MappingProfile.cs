@@ -1,6 +1,6 @@
 ﻿using AutoMapper;
 
-namespace SearchJobsServcie.SharedKernel.Mapper
+namespace SearchJobsService.SharedKernel.Mapper
 {
     public class MappingProfile : Profile
     {

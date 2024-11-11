@@ -1,4 +1,4 @@
-﻿namespace SearchJobsServcie.Modules.Feature
+﻿namespace SearchJobsService.Modules.Feature
 {
     public static class Feature
     {

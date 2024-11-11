@@ -1,11 +1,10 @@
 ﻿using AutoMapper;
 using MediatR;
+using SharedKernel.Common.Extensions;
 using SharedKernel.Common.Responses;
 using SharedKernel.Interface;
 using UsersService.Application.Dto;
-using UsersService.Domain.Events;
 using UsersService.Domain.Interface;
-using UsersService.Infrastructure.Messaging;
 
 namespace UsersService.Application.Queries.Handlers
 {
@@ -15,7 +14,7 @@ namespace UsersService.Application.Queries.Handlers
         private readonly IUserDomain _userDomain;
         private readonly IGlobalExceptionHandler _globalExceptionHandler;
         private readonly IEndpointResponse<RetrieveDatabaseResult<UserRetrieveDTO>> _endpointResponse;
-        private readonly EventBusRabbitMQ _eventBus;
+        private readonly IEventPublisherService _eventPublisherService;
         #endregion
 
         #region Constructor
@@ -24,16 +23,15 @@ namespace UsersService.Application.Queries.Handlers
             IMapper mapper,
             IGlobalExceptionHandler globalExceptionHandler,
             IEndpointResponse<RetrieveDatabaseResult<UserRetrieveDTO>> endpointResponse,
-            EventBusRabbitMQ eventBus
+            IEventPublisherService eventPublisherService
             )
         {
             _userDomain = userDomain;
             _globalExceptionHandler = globalExceptionHandler;
             _endpointResponse = endpointResponse;
-            _eventBus = eventBus;
+            _eventPublisherService = eventPublisherService;
         }
         #endregion
-
 
         #region Methods
         public async Task<IEndpointResponse<RetrieveDatabaseResult<UserRetrieveDTO>>> Handle(GetUserByIdQuery request, CancellationToken cancellationToken)
@@ -57,22 +55,32 @@ namespace UsersService.Application.Queries.Handlers
                         CreatedAt = DateTime.Now
                     };
 
-                    var entityOperationEvent = new EntityOperationEvent(
+                    await _eventPublisherService.PublishEventAsync(
                         entityName: "User",
-                        operationType: "Get By Id",
+                        operationType: "GET",
                         success: true,
                         performedBy: "Admin",
-                        reason: response.ResultStatus.ToString(),
-                        additionalData: additionalData
+                        reason: response?.ResultMessage,
+                        additionalData: additionalData,
+                        exchangeName: PublicationExchangeNames.Users.ToExchangeName(),
+                        routingKey: PublicationRoutingKeys.Get_Success.ToRoutingKey()
                         );
-
-                    _eventBus.Publish("UserExchange", "UserGetByIdEvent", entityOperationEvent);
-
                 }
                 else
                 {
                     _endpointResponse.IsSuccess = false;
                     _endpointResponse.Message = "User not found";
+
+                    await _eventPublisherService.PublishEventAsync(
+                        entityName: "User",
+                        operationType: "GET",
+                        success: false,
+                        performedBy: "Admin",
+                        reason: response?.ResultMessage ?? "User nor found",
+                        additionalData: response,
+                        exchangeName: PublicationExchangeNames.Users.ToExchangeName(),
+                        routingKey: PublicationRoutingKeys.GetAll_Failed.ToRoutingKey()
+                        );
                 }
             }
             catch (Exception ex)
@@ -81,10 +89,16 @@ namespace UsersService.Application.Queries.Handlers
                 _endpointResponse.IsSuccess = false;
                 _endpointResponse.Message = ex.Message;
 
-                var failedEvent = new EntityOperationEvent(entityName: "User", operationType: "GetById", success: false, performedBy: "AdminUser");
-
-                _eventBus.Publish("UserExchange", "UserGetByIdFailed", failedEvent);
-
+                await _eventPublisherService.PublishEventAsync(
+                    entityName: "User",
+                    operationType: "GET",
+                    success: false,
+                    performedBy: "Admin",
+                    reason: "User nor found",
+                    additionalData: null,
+                    exchangeName: PublicationExchangeNames.Users.ToExchangeName(),
+                    routingKey: PublicationRoutingKeys.Get_Error.ToRoutingKey()
+                    );
             }
             return _endpointResponse;
         }

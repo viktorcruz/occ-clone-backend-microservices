@@ -1,7 +1,7 @@
 ﻿using Microsoft.OpenApi.Models;
 using System.Reflection;
 
-namespace SearchJobsServcie.Modules.Swagger
+namespace SearchJobsService.Modules.Swagger
 {
     public static class Swagger
     {

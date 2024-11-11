@@ -1,11 +1,9 @@
 ﻿using Dapper;
 using Moq;
-using SharedKernel.Common.Exceptions;
+using SharedKernel.Common.Interfaces;
 using SharedKernel.Interface;
 using System.Data;
 using UsersService.Infrastructure.Repository;
-using UsersService.Persistence.Interface;
-using Xunit;
 
 namespace UsersService.UnitTest.Repositories
 {
@@ -25,7 +23,7 @@ namespace UsersService.UnitTest.Repositories
             mockDbConnection.Setup(conn => conn.BeginTransaction()).Returns(mockDbTransaction.Object);
 
             // Mock IDbConnectionFactory
-            var mockDbConnectionFactory = new Mock<IDbConnectionFactory>();
+            var mockDbConnectionFactory = new Mock<ISqlServerConnectionFactory>();
             mockDbConnectionFactory.Setup(factory => factory.GetConnection(It.IsAny<string>()))
                 .Returns(mockDbConnection.Object);
 

@@ -38,9 +38,7 @@
     <Folder Include="Domain\Core\" />
     <Folder Include="Domain\Entity\" />
     <Folder Include="Domain\Events\" />
-    <Folder Include="Domain\Interface\" />
     <Folder Include="Infrastructure\Interface\" />
-    <Folder Include="Infrastructure\Messaging\" />
     <Folder Include="Infrastructure\Repository\" />
     <Folder Include="Saga\" />
   </ItemGroup>

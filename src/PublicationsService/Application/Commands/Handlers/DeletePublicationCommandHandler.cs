@@ -1,5 +1,7 @@
 ﻿using MediatR;
 using PublicationsService.Domain.Interface;
+using SharedKernel.Common.Extensions;
+using SharedKernel.Common.Interfaces;
 using SharedKernel.Interface;
 
 namespace PublicationsService.Aplication.Commands.Handlers
@@ -8,26 +10,23 @@ namespace PublicationsService.Aplication.Commands.Handlers
     {
         #region Properties
         private readonly IPublicationDomain _publicationDomain;
+        private readonly IEventPublisherService _eventPublisherService;
         private readonly IGlobalExceptionHandler _globalExceptionHandler;
         private readonly IEndpointResponse<IDatabaseResult> _endpointResponse;
-        private readonly IEventBus _eventBus;
-        private readonly IEntityOperationEventFactory _entityOperationEventFactory;
         #endregion
 
         #region Constructor
         public DeletePublicationCommandHandler(
             IPublicationDomain publicationDomain,
+            IEventPublisherService eventPublisherService,
             IGlobalExceptionHandler globalExceptionHandler,
-            IEndpointResponse<IDatabaseResult> endpointResponse,
-            IEventBus eventBus,
-            IEntityOperationEventFactory entityOperationEventFactory
+            IEndpointResponse<IDatabaseResult> endpointResponse
             )
         {
             _publicationDomain = publicationDomain;
+            _eventPublisherService = eventPublisherService;
             _globalExceptionHandler = globalExceptionHandler;
             _endpointResponse = endpointResponse;
-            _entityOperationEventFactory = entityOperationEventFactory;
-            _eventBus = eventBus;
         }
         #endregion
 
@@ -50,21 +49,32 @@ namespace PublicationsService.Aplication.Commands.Handlers
                         IsDeleted = true
                     };
 
-                    var entityInstance = _entityOperationEventFactory.CreateEvent(
+                    await _eventPublisherService.PublishEventAsync(
                         entityName: "Publication",
-                        operationType: "Delete",
+                        operationType: "DELETE",
                         success: true,
                         performedBy: "Admin",
                         reason: response.ResultMessage,
-                        additionalData: additionalData
+                        additionalData: additionalData,
+                        exchangeName: PublicationExchangeNames.Publication.ToExchangeName(),
+                        routingKey: PublicationRoutingKeys.Delete_Success.ToRoutingKey()
                         );
-
-                    _eventBus.Publish("PublicationExchange", "PublicationDeletedEvent", entityInstance);
                 }
                 else
                 {
                     _endpointResponse.IsSuccess = false;
                     _endpointResponse.Message = response?.ResultMessage ?? "Publication not found";
+
+                    await _eventPublisherService.PublishEventAsync(
+                        entityName: "Publication",
+                        operationType: "DELETE",
+                        success: false,
+                        performedBy: "Admin",
+                        reason: response?.ResultMessage ?? "Publication not found",
+                        additionalData: null,
+                        exchangeName: PublicationExchangeNames.Publication.ToExchangeName(),
+                        routingKey: PublicationRoutingKeys.Delete_Failed.ToRoutingKey()
+                        );
                 }
             }
             catch (Exception ex)
@@ -73,16 +83,16 @@ namespace PublicationsService.Aplication.Commands.Handlers
                 _endpointResponse.IsSuccess = false;
                 _endpointResponse.Message = $"Error deleting publication: {ex.Message}";
 
-                var failedEvent = _entityOperationEventFactory.CreateEvent(
-                    entityName: "Publication",
-                        operationType: "Delete",
+                await _eventPublisherService.PublishEventAsync(
+                        entityName: "Publication",
+                        operationType: "DELETE",
                         success: false,
                         performedBy: "Admin",
                         reason: ex.Message,
-                        additionalData: null
+                        additionalData: null,
+                        exchangeName: PublicationExchangeNames.Publication.ToExchangeName(),
+                        routingKey: PublicationRoutingKeys.Delete_Error.ToRoutingKey()
                         );
-
-                _eventBus.Publish("PublicationExchange", "PublicationDeletedEvent", _entityOperationEventFactory);
             }
             return _endpointResponse;
         }

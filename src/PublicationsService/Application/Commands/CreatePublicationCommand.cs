@@ -16,6 +16,7 @@ namespace PublicationsService.Aplication.Commands
         public decimal Salary { get; set; }
         public string Location { get; set; }
         public string Company { get; set; }
+        public int IdJobType { get; set; }
         #endregion
 
         #region Constructor
@@ -30,6 +31,7 @@ namespace PublicationsService.Aplication.Commands
             Salary = publicationDTO.Salary;
             Location = publicationDTO.Location;
             Company = publicationDTO.Company;
+            IdJobType = publicationDTO.IdJobType;
         }
         #endregion
     }

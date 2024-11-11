@@ -1,10 +1,9 @@
 ﻿using MediatR;
+using SharedKernel.Common.Extensions;
 using SharedKernel.Common.Responses;
 using SharedKernel.Interface;
 using UsersService.Application.Dto;
-using UsersService.Domain.Events;
 using UsersService.Domain.Interface;
-using UsersService.Infrastructure.Messaging;
 
 namespace UsersService.Application.Queries.Handlers
 {
@@ -14,7 +13,7 @@ namespace UsersService.Application.Queries.Handlers
         private readonly IUserDomain _usersDomain;
         private readonly IGlobalExceptionHandler _globalExceptionHandler;
         private readonly IEndpointResponse<RetrieveDatabaseResult<List<UserRetrieveDTO>>> _endpointResponse;
-        private readonly EventBusRabbitMQ _eventBus;
+        private readonly IEventPublisherService _eventPublisherService;
         #endregion
 
         #region Constructor
@@ -22,13 +21,13 @@ namespace UsersService.Application.Queries.Handlers
             IUserDomain usersDomain,
             IGlobalExceptionHandler globalExceptionHandler,
             IEndpointResponse<RetrieveDatabaseResult<List<UserRetrieveDTO>>> endpointResponse,
-            EventBusRabbitMQ eventBus
+            IEventPublisherService eventPublisherService
             )
         {
             _usersDomain = usersDomain;
             _globalExceptionHandler = globalExceptionHandler;
             _endpointResponse = endpointResponse;
-            _eventBus = eventBus;
+            _eventPublisherService = eventPublisherService;
         }
         #endregion
 
@@ -50,21 +49,32 @@ namespace UsersService.Application.Queries.Handlers
                         TotalUsers = response.Details.Count,
                     };
 
-                    var entityOperationEvent = new EntityOperationEvent(
+                    await _eventPublisherService.PublishEventAsync(
                         entityName: "User",
-                        operationType: "Get All",
+                        operationType: "GETALL",
                         success: true,
                         performedBy: "Admin",
-                        reason: response.ResultStatus.ToString(),
-                        additionalData: additionalData
+                        reason: response?.ResultMessage,
+                        additionalData: additionalData,
+                        exchangeName: PublicationExchangeNames.Users.ToExchangeName(),
+                        routingKey: PublicationRoutingKeys.GetAll_Success.ToRoutingKey()
                         );
-
-                    _eventBus.Publish("UserExchange", "UserGetAllEvent", entityOperationEvent);
                 }
                 else
                 {
                     _endpointResponse.IsSuccess = false;
                     _endpointResponse.Message = "Users not found";
+
+                    await _eventPublisherService.PublishEventAsync(
+                        entityName: "User",
+                        operationType: "GETALL",
+                        success: false,
+                        performedBy: "Admin",
+                        reason: response?.ResultMessage ?? "User not found",
+                        additionalData: response,
+                        exchangeName: PublicationExchangeNames.Users.ToExchangeName(),
+                        routingKey: PublicationRoutingKeys.GetAll_Failed.ToRoutingKey()
+                        );
                 }
             }
             catch (Exception ex)
@@ -73,9 +83,15 @@ namespace UsersService.Application.Queries.Handlers
                 _endpointResponse.IsSuccess = false;
                 _endpointResponse.Message = ex.Message;
 
-                var failedEvent = new EntityOperationEvent(entityName: "User", operationType: "GetAll", success: false, performedBy: "AdminUser");
-
-                _eventBus.Publish("UserExchange", "UserGetAllFailed", failedEvent);
+                await _eventPublisherService.PublishEventAsync(
+                    entityName: "User",
+                    operationType: "GETALL",
+                    success: false,
+                    performedBy: "Admin",
+                    reason: "Data not found",
+                    exchangeName: PublicationExchangeNames.Users.ToExchangeName(),
+                    routingKey: PublicationRoutingKeys.GetAll_Error.ToRoutingKey()
+                    );
             }
             return _endpointResponse;
         }
