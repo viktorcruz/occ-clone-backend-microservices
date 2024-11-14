@@ -13,77 +13,18 @@ namespace UsersService.Infrastructure.Repository
         #region Properties
         private readonly string OCC_Connection = "OCC_Connection";
         private readonly ISqlServerConnectionFactory _sqlServerConnection;
-        private readonly IGlobalExceptionHandler _globalExceptionHandler;
+        private readonly IApplicationExceptionHandler _applicationExceptionHandler;
         #endregion
 
         #region Constructor
-        public UserRepository(ISqlServerConnectionFactory sqlServerConnection, IGlobalExceptionHandler globalExceptionHandler)
+        public UserRepository(ISqlServerConnectionFactory sqlServerConnection, IApplicationExceptionHandler applicationExceptionHandler)
         {
             _sqlServerConnection = sqlServerConnection;
-            _globalExceptionHandler = globalExceptionHandler;
+            _applicationExceptionHandler = applicationExceptionHandler;
         }
         #endregion
 
         #region Methods
-        public async Task<DatabaseResult> CreateUserAsync(AddUserDTO userDTO)
-        {
-            using (var connection = _sqlServerConnection.GetConnection(OCC_Connection))
-            {
-                connection.Open();
-
-                using (var transaction = connection.BeginTransaction())
-                {
-                    try
-                    {
-                        var query = "Usp_Users_Add";
-                        var parameters = new DynamicParameters();
-                        parameters.Add("@IdRole", userDTO.IdRole);
-                        parameters.Add("@FirstName", userDTO.FirstName);
-                        parameters.Add("@LastName", userDTO.LastName);
-                        parameters.Add("@Email", userDTO.Email);
-
-                        var results = await connection.QuerySingleAsync<DatabaseResult>(
-                                query,
-                                parameters,
-                                transaction: transaction,
-                                commandType: CommandType.StoredProcedure
-                        );
-
-                        transaction.Commit();
-                        if (results != null)
-                        {
-                            return results;
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        transaction.Rollback();
-                        _globalExceptionHandler.HandleGenericException<string>(ex, "UserRepository.CreateUserAsync");
-                        return new DatabaseResult
-                        {
-                            ResultStatus = false,
-                            ResultMessage = ex.Message,
-                            OperationType = "CREATE",
-                            AffectedRecordId = 0,
-                            OperationDateTime = DateTime.Now,
-                            ExceptionMessage = ex.Message
-                        };
-                    }
-
-                    return new DatabaseResult
-                    {
-                        ResultStatus = false,
-                        ResultMessage = "",
-                        OperationType = "CREATE",
-                        AffectedRecordId = 0,
-                        OperationDateTime = DateTime.Now,
-                        ExceptionMessage = ""
-                    };
-                }
-            }
-        }
-
-
         public async Task<RetrieveDatabaseResult<UserRetrieveDTO>> GetUserByIdAsync(int userId)
         {
             using (var connection = _sqlServerConnection.GetConnection(OCC_Connection))
@@ -128,15 +69,9 @@ namespace UsersService.Infrastructure.Repository
                 }
                 catch (Exception ex)
                 {
-                    _globalExceptionHandler.HandleGenericException<string>(ex, "UserRepository.GetUserByIdAsync");
+                    _applicationExceptionHandler.CaptureException<string>(ex, ApplicationLayer.Repository, ActionType.Get);
                 }
-                finally
-                {
-                    if (connection.State == ConnectionState.Open)
-                    {
-                        connection.Close();
-                    }
-                }
+
                 return new RetrieveDatabaseResult<UserRetrieveDTO>();
             }
         }
@@ -160,7 +95,7 @@ namespace UsersService.Infrastructure.Repository
                         {
                             Details = userList,
                             ResultStatus = true,
-                            ResultMessage = "Users retrieved seccessfully",
+                            ResultMessage = "Users retrieved successfully",
                             OperationType = "GET ALL",
                             AffectedRecordId = 0,
                             OperationDateTime = DateTime.Now,
@@ -174,7 +109,7 @@ namespace UsersService.Infrastructure.Repository
                             Details = null,
                             ResultStatus = false,
                             ResultMessage = "No users found",
-                            OperationType = "GET ALL",
+                            OperationType = "GETALL",
                             AffectedRecordId = 0,
                             OperationDateTime = DateTime.Now,
                             ExceptionMessage = null
@@ -183,13 +118,13 @@ namespace UsersService.Infrastructure.Repository
                 }
                 catch (Exception ex)
                 {
-                    _globalExceptionHandler.HandleGenericException<string>(ex, "UserRepository.GetAllUsersAsync");
+                    _applicationExceptionHandler.CaptureException<string>(ex, ApplicationLayer.Repository, ActionType.FetchAll);
                     return new RetrieveDatabaseResult<List<UserRetrieveDTO>>
                     {
                         Details = null,
                         ResultStatus = false,
                         ResultMessage = $"Error retrieving users: {ex.Message}",
-                        OperationType = "GET ALL",
+                        OperationType = "GETALL",
                         AffectedRecordId = 0,
                         OperationDateTime = DateTime.Now,
                         ExceptionMessage = ex.Message
@@ -242,13 +177,13 @@ namespace UsersService.Infrastructure.Repository
                 }
                 catch (Exception ex)
                 {
-                    _globalExceptionHandler.HandleGenericException<string>(ex, "SearchUsersAsync");
+                    _applicationExceptionHandler.CaptureException<string>(ex, ApplicationLayer.Repository, ActionType.FetchAll);
                     return new RetrieveDatabaseResult<List<SearchUsersDTO>>
                     {
                         Details = null,
                         ResultStatus = false,
                         ResultMessage = $"Error retrieving users: {ex.Message}",
-                        OperationType = "GET ALL",
+                        OperationType = "GETALL",
                         AffectedRecordId = 0,
                         OperationDateTime = DateTime.Now,
                         ExceptionMessage = ex.Message
@@ -301,7 +236,7 @@ namespace UsersService.Infrastructure.Repository
                     catch (Exception ex)
                     {
                         transaction.Rollback();
-                        _globalExceptionHandler.HandleGenericException<string>(ex, "UserRepository.UpdateUserAync");
+                        _applicationExceptionHandler.CaptureException<string>(ex, ApplicationLayer.Repository, ActionType.Update);
                         return await Task.FromResult(new DatabaseResult
                         {
                             ResultStatus = false,
@@ -311,13 +246,6 @@ namespace UsersService.Infrastructure.Repository
                             OperationDateTime = DateTime.Now,
                             ExceptionMessage = ex.Message
                         });
-                    }
-                    finally
-                    {
-                        if (connection.State == ConnectionState.Open)
-                        {
-                            connection.Close();
-                        }
                     }
                 }
             }
@@ -363,7 +291,7 @@ namespace UsersService.Infrastructure.Repository
                     catch (Exception ex)
                     {
                         transaction.Rollback();
-                        _globalExceptionHandler.HandleGenericException<string>(ex, "UserRepository.UpdateUserProfileAsync");
+                        _applicationExceptionHandler.CaptureException<string>(ex, ApplicationLayer.Repository, ActionType.Update);
                         return await Task.FromResult(new DatabaseResult
                         {
                             ResultStatus = false,
@@ -373,13 +301,6 @@ namespace UsersService.Infrastructure.Repository
                             OperationDateTime = DateTime.Now,
                             ExceptionMessage = ex.Message
                         }); ;
-                    }
-                    finally
-                    {
-                        if (connection.State == ConnectionState.Open)
-                        {
-                            connection.Close();
-                        }
                     }
                 }
             }
@@ -416,7 +337,7 @@ namespace UsersService.Infrastructure.Repository
                     catch (Exception ex)
                     {
                         transaction.Rollback();
-                        _globalExceptionHandler.HandleGenericException<string>(ex, "UserRepository.DeleteUserAsync");
+                        _applicationExceptionHandler.CaptureException<string>(ex, ApplicationLayer.Repository, ActionType.Delete);
                         return new DatabaseResult();
                     }
                 }

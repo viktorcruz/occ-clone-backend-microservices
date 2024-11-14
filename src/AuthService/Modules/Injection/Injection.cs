@@ -9,7 +9,6 @@ using AuthService.Infrastructure.Adapters;
 using AuthService.Infrastructure.Messaging;
 using AuthService.Infrastructure.Repository;
 using AuthService.Infrastructure.Services;
-using AuthService.Infrastructure.Services.Interfaces;
 using SharedKernel.Common;
 using SharedKernel.Common.Exceptions;
 using SharedKernel.Common.Interfaces;
@@ -122,7 +121,7 @@ namespace AuthService.Modules.Injection
         public static IServiceCollection AddCommonServices(this IServiceCollection services)
         {
             services.AddScoped<ISqlServerConnectionFactory, SqlServerConnectionFactory>();
-            services.AddScoped<IGlobalExceptionHandler, GlobalExceptionHandler>();
+            services.AddScoped<IApplicationExceptionHandler, ApplicationExceptionHandler>();
             services.AddScoped(typeof(IEndpointResponse<>), typeof(EndpointResponse<>));
             services.AddScoped<IDatabaseResult, DatabaseResult>();
             services.AddScoped<ITokenService, TokenService>();

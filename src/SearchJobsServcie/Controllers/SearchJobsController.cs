@@ -15,14 +15,14 @@ namespace SearchJobsService.Controllers
     {
         #region Properties
         private readonly IMediator _mediator;
-        private readonly IGlobalExceptionHandler _globalExceptionHandler;
+        private readonly IApplicationExceptionHandler _applicationExceptionHandler;
         #endregion
 
         #region Constructor
-        public SearchJobsController(IMediator mediator, IGlobalExceptionHandler globalExceptionHandler)
+        public SearchJobsController(IMediator mediator, IApplicationExceptionHandler applicationExceptionHandler)
         {
             _mediator = mediator;
-            _globalExceptionHandler = globalExceptionHandler;
+            _applicationExceptionHandler = applicationExceptionHandler;
         }
         #endregion
 
@@ -49,7 +49,7 @@ namespace SearchJobsService.Controllers
             }
             catch (Exception ex)
             {
-                _globalExceptionHandler.HandleGenericException<string>(ex, "SearchJobsController");
+                _applicationExceptionHandler.CaptureException<string>(ex, ApplicationLayer.Controller, ActionType.Apply);
                 return BadRequest(ex);
             }
         }
@@ -69,7 +69,7 @@ namespace SearchJobsService.Controllers
             }
             catch (Exception ex)
             {
-                _globalExceptionHandler.HandleGenericException<string>(ex, "SearchJobsController");
+                _applicationExceptionHandler.CaptureException<string>(ex, ApplicationLayer.Controller, ActionType.Withdraw);
                 return BadRequest(ex);
             }
         }
@@ -90,7 +90,7 @@ namespace SearchJobsService.Controllers
             }
             catch(Exception ex)
             {
-                _globalExceptionHandler.HandleGenericException<string>(ex, "SearchJobsController");
+                _applicationExceptionHandler.CaptureException<string>(ex, ApplicationLayer.Controller, ActionType.FetchAll);
                 return BadRequest(ex);
             }
         }
@@ -114,7 +114,7 @@ namespace SearchJobsService.Controllers
             }
             catch (Exception ex)
             {
-                _globalExceptionHandler.HandleGenericException<string>(ex, "SearchJobsController");
+                _applicationExceptionHandler.CaptureException<string>(ex, ApplicationLayer.Controller, ActionType.FetchAll);
                 return BadRequest(ex);
             }
         }

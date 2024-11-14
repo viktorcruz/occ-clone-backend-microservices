@@ -1,4 +1,5 @@
 using FluentValidation.AspNetCore;
+using NLog.Web;
 using PublicationsService.Aplication.Queries;
 using PublicationsService.Modules.Authentication;
 using PublicationsService.Modules.Feature;
@@ -6,7 +7,7 @@ using PublicationsService.Modules.Injection;
 using PublicationsService.Modules.Mapper;
 using PublicationsService.Modules.Swagger;
 using SharedKernel.Common.Events;
-using SharedKernel.Common.Interfaces;
+using SharedKernel.Common.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);
 var configurationManager = builder.Configuration;
@@ -33,20 +34,32 @@ builder.Services.AddAuthorization();
 
 // Configuración de logging
 builder.Logging.ClearProviders();
+builder.Logging.ClearProviders();
+builder.Host.UseNLog();
 builder.Logging.AddConsole();
 builder.Logging.SetMinimumLevel(LogLevel.Debug);
 builder.Logging.AddFilter("Microsoft.AspNetCore.Authentication", LogLevel.Trace);
 builder.Logging.AddFilter("Microsoft.AspNetCore", LogLevel.Debug);
 
+builder.Services.AddEventHandler();
+
+//builder.Services.AddScoped<IEventHandler<UserCreatedEvent>, UserCreatedEventHandler>();
+//builder.Services.AddScoped<IEventHandler<UserDeletedEvent>, UserDeletedEventHandler>();
+//builder.Services.AddScoped<IEventHandler<PublicationCreatedEvent>, PublicationCreatedEventHandler>();
+
 var app = builder.Build();
 
-// Usa el `ServiceProvider` de `app.Services` para resolver `IEventBus`
-var eventBus = app.Services.GetRequiredService<IEventBus>();
-// Crear y configurar el EventRouter para este microservicio
-var eventRouter = new EventRouter(app.Services, eventBus);
-// Registrar eventos en el EventRouter
-eventRouter.RegisterEventHandler<UserCreatedEvent>("user_exchange", "user.created");
-eventRouter.RegisterEventHandler<UserDeletedEvent>("user_exchange", "user.deleted");
+app.UseEventRouter()
+    .Use(async (context, next) =>
+    {
+        var eventRouter = context.RequestServices.GetRequiredService<EventRouter>();
+
+        eventRouter.RegisterEventHandler<UserCreatedEvent>(PublicationExchangeNames.User.ToExchangeName(), PublicationRoutingKeys.Created.ToRoutingKey());
+        eventRouter.RegisterEventHandler<UserDeletedEvent>(PublicationExchangeNames.User.ToExchangeName(), PublicationRoutingKeys.Deleted.ToRoutingKey());
+        eventRouter.RegisterEventHandler<PublicationCreatedEvent>(PublicationExchangeNames.Publication.ToExchangeName(), PublicationRoutingKeys.Created.ToRoutingKey());
+
+        await next.Invoke();
+    });
 
 if (app.Environment.IsDevelopment())
 {

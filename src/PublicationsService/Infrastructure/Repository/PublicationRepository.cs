@@ -14,14 +14,14 @@ namespace PublicationsService.Infrastructure.Repository
         #region Properties
         private readonly string OCC_Connection = "OCC_Connection";
         private readonly ISqlServerConnectionFactory _sqlServerConnection;
-        private readonly IGlobalExceptionHandler _globalExceptionHandler;
+        private readonly IApplicationExceptionHandler _applicationExceptionHandler;
         #endregion
 
         #region Constructor
-        public PublicationRepository(ISqlServerConnectionFactory sqlServerConnection, IGlobalExceptionHandler globalExceptionHandler)
+        public PublicationRepository(ISqlServerConnectionFactory sqlServerConnection, IApplicationExceptionHandler applicationExceptionHandler)
         {
             _sqlServerConnection = sqlServerConnection;
-            _globalExceptionHandler = globalExceptionHandler;
+            _applicationExceptionHandler = applicationExceptionHandler;
         }
         #endregion
 
@@ -68,7 +68,7 @@ namespace PublicationsService.Infrastructure.Repository
                     catch (Exception ex)
                     {
                         transaction.Rollback();
-                        _globalExceptionHandler.HandleGenericException<string>(ex, "PublicationRepository");
+                        _applicationExceptionHandler.CaptureException<string>(ex, ApplicationLayer.Repository, ActionType.Insert);
                         return new DatabaseResult
                         {
                             ResultStatus = false,
@@ -137,15 +137,15 @@ namespace PublicationsService.Infrastructure.Repository
                 }
                 catch (Exception ex)
                 {
-                    _globalExceptionHandler.HandleGenericException<string>(ex, "PublicationRepository.GetPublicationById");
+                    _applicationExceptionHandler.CaptureException<string>(ex, ApplicationLayer.Repository, ActionType.Get);
                 }
-                finally
-                {
-                    if (connection.State == System.Data.ConnectionState.Open)
-                    {
-                        connection.Close();
-                    }
-                }
+                //finally
+                //{
+                //    if (connection.State == System.Data.ConnectionState.Open)
+                //    {
+                //        connection.Close();
+                //    }
+                //}
                 return new RetrieveDatabaseResult<PublicationRetrieveDTO>();
             }
         }
@@ -190,7 +190,7 @@ namespace PublicationsService.Infrastructure.Repository
             }
             catch (Exception ex)
             {
-                _globalExceptionHandler.HandleGenericException<string>(ex, "PublicationRepository");
+                _applicationExceptionHandler.CaptureException<string>(ex, ApplicationLayer.Repository, ActionType.FetchAll);
                 return new RetrieveDatabaseResult<List<PublicationRetrieveDTO>>
                 {
                     Details = null,
@@ -249,7 +249,7 @@ namespace PublicationsService.Infrastructure.Repository
                     catch (Exception ex)
                     {
                         transaction.Rollback();
-                        _globalExceptionHandler.HandleGenericException<string>(ex, "PublicationRepository.UpdatePublicationAsync");
+                        _applicationExceptionHandler.CaptureException<string>(ex, ApplicationLayer.Repository, ActionType.Update);
                         return await Task.FromResult(new DatabaseResult
                         {
                             ResultStatus = false,
@@ -299,7 +299,7 @@ namespace PublicationsService.Infrastructure.Repository
                     catch (Exception ex)
                     {
                         transaction.Rollback();
-                        _globalExceptionHandler.HandleGenericException<string>(ex, "PublicationRepository.DeletePublicationAsync");
+                        _applicationExceptionHandler.CaptureException<string>(ex, ApplicationLayer.Repository, ActionType.Delete);
                         return new DatabaseResult { ResultStatus = false };
                     }
                     finally

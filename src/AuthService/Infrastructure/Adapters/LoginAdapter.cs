@@ -3,8 +3,9 @@ using AuthService.Application.DTO;
 using AuthService.Domain.Ports.Output;
 using AuthService.Domain.Ports.Output.Services;
 using AuthService.Infrastructure.Security;
-using AuthService.Infrastructure.Services.Interfaces;
+using SharedKernel.Common.Events;
 using SharedKernel.Common.Extensions;
+using SharedKernel.Common.Interfaces;
 using SharedKernel.Interface;
 
 namespace AuthService.Infrastructure.Adapters
@@ -16,7 +17,7 @@ namespace AuthService.Infrastructure.Adapters
         private readonly IRolePort _roleRepository;
         private readonly ITokenService _tokenService;
         private readonly IEventPublisherService _eventPublisherService;
-        private readonly IGlobalExceptionHandler _globalExceptionHandler;
+        private readonly IApplicationExceptionHandler _applicationExceptionHandler;
         #endregion
 
         #region Constructor
@@ -25,14 +26,14 @@ namespace AuthService.Infrastructure.Adapters
             IRolePort roleRepository,
             ITokenService tokenService,
             IEventPublisherService eventPublisherService,
-            IGlobalExceptionHandler globalExceptionHandler
+            IApplicationExceptionHandler applicationExceptionHandler
             )
         {
             _userRepository = userRepository;
             _roleRepository = roleRepository;
             _tokenService = tokenService;
             _eventPublisherService = eventPublisherService;
-            _globalExceptionHandler = globalExceptionHandler;
+            _applicationExceptionHandler = applicationExceptionHandler;
         }
         #endregion
 
@@ -81,7 +82,7 @@ namespace AuthService.Infrastructure.Adapters
                     Email = user.Details.Email,
                 };
 
-                await _eventPublisherService.PublishEventAsyn(
+                await _eventPublisherService.PublishEventAsync(
                     entityName: "Auhorize",
                     operationType: "Login",
                     success: true,
@@ -99,15 +100,19 @@ namespace AuthService.Infrastructure.Adapters
             }
             catch (Exception ex)
             {
-                _globalExceptionHandler.HandleGenericException<string>(ex, "LoginAdapter");
-
-                await _eventPublisherService.PublishEventAsyn(
+                _applicationExceptionHandler.CaptureException<string>(ex, ApplicationLayer.Adapter, ActionType.Login);
+                var registerErrorEvent = new RegisterErrorEvent
+                {
+                    ErrorMessage = ex.Message,
+                    StackTrace = ex.StackTrace
+                };
+                await _eventPublisherService.PublishEventAsync(
                     entityName: "Authorize",
                     operationType: "Login",
                     success: false,
                     performedBy: "Admin",
                     reason: ex.Message,
-                    additionalData: null,
+                    additionalData: registerErrorEvent,
                     exchangeName: PublicationExchangeNames.Authorize.ToExchangeName(),
                     routingKey: PublicationRoutingKeys.Login_Error.ToRoutingKey()
                     );

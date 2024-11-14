@@ -10,17 +10,17 @@ namespace AuthService.Infrastructure.Repository
     {
         private readonly ISqlServerConnectionFactory _sqlServerConnection;
         private readonly string OCC_Connection = "OCC_Connection";
-        private readonly IGlobalExceptionHandler _globalExceptionHandler;
+        private readonly IApplicationExceptionHandler _applicationExceptionHandler;
         private readonly IDapperExecutor _dapperExecutor;
 
         public EventLogRepository(
             ISqlServerConnectionFactory sqlServerConnection,
-            IGlobalExceptionHandler globalExceptionHandler,
+            IApplicationExceptionHandler applicationExceptionHandler,
             IDapperExecutor dapperExecutor
         )
         {
             _sqlServerConnection = sqlServerConnection;
-            _globalExceptionHandler = globalExceptionHandler;
+            _applicationExceptionHandler = applicationExceptionHandler;
             _dapperExecutor = dapperExecutor;
         }
 
@@ -45,10 +45,8 @@ namespace AuthService.Infrastructure.Repository
                     catch (Exception ex)
                     {
                         transaction.Rollback();
-                        _globalExceptionHandler.HandleGenericException<string>(
-                            ex,
-                            "EventLogsRepository"
-                        );
+                        _applicationExceptionHandler.CaptureException<string>(ex, ApplicationLayer.Repository, ActionType.Execute);
+                        throw;
                     }
                 }
             }

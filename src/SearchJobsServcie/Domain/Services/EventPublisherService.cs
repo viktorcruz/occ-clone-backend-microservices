@@ -21,5 +21,11 @@ namespace SearchJobsService.Domain.Services
             _eventBus.Publish(exchangeName, routingKey, entityEvent);
             await Task.CompletedTask;
         }
+
+        public async Task PublicEventAsync<T>(string exchangeName, string routingKey, T eventMessage)
+        {
+            _eventBus.Publish(exchangeName, routingKey, eventMessage);
+            await Task.CompletedTask;
+        }
     }
 }

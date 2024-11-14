@@ -1,7 +1,9 @@
 ﻿using MediatR;
 using SearchJobsService.Application.Dto;
 using SearchJobsService.Domain.Interface;
+using SharedKernel.Common.Events;
 using SharedKernel.Common.Extensions;
+using SharedKernel.Common.Interfaces;
 using SharedKernel.Interface;
 
 namespace SearchJobsService.Application.Commands.Handler
@@ -11,7 +13,7 @@ namespace SearchJobsService.Application.Commands.Handler
         #region Properties
         private readonly ISearchJobsDomain _searchJobsDomain;
         private readonly IEventPublisherService _eventPublisherService;
-        private readonly IGlobalExceptionHandler _globalExceptionHandler;
+        private readonly IApplicationExceptionHandler _applicationExceptionHandler;
         private readonly IEndpointResponse<IDatabaseResult> _endpointResponse;
         #endregion
 
@@ -19,13 +21,13 @@ namespace SearchJobsService.Application.Commands.Handler
         public WithdrawCommandHandler(
             ISearchJobsDomain searchJobsDomain,
             IEventPublisherService eventPublisherService,
-            IGlobalExceptionHandler globalExceptionHandler,
+            IApplicationExceptionHandler applicationExceptionHandler,
             IEndpointResponse<IDatabaseResult> endpointResponse
             )
         {
             _searchJobsDomain = searchJobsDomain;
             _eventPublisherService = eventPublisherService;
-            _globalExceptionHandler = globalExceptionHandler;
+            _applicationExceptionHandler = applicationExceptionHandler;
             _endpointResponse = endpointResponse;
         }
         #endregion
@@ -57,7 +59,7 @@ namespace SearchJobsService.Application.Commands.Handler
                         performedBy: "Admin",
                         reason: response.ResultMessage,
                         additionalData: additionalData,
-                        exchangeName: PublicationExchangeNames.SearchJobs.ToExchangeName(),
+                        exchangeName: PublicationExchangeNames.Job.ToExchangeName(),
                         routingKey: PublicationRoutingKeys.Withdraw_Success.ToRoutingKey()
                         );
                 }
@@ -73,28 +75,30 @@ namespace SearchJobsService.Application.Commands.Handler
                         performedBy: "Admin",
                         reason: response?.ResultMessage ?? "User not found",
                         additionalData: request,
-                        exchangeName: PublicationExchangeNames.SearchJobs.ToExchangeName(),
+                        exchangeName: PublicationExchangeNames.Job.ToExchangeName(),
                         routingKey: PublicationRoutingKeys.Withdraw_Failed.ToRoutingKey()
                         );
                 }
             }
             catch (Exception ex)
             {
-                _globalExceptionHandler.HandleGenericException<string>(ex, "WithdrawCommandHandler");
+                _applicationExceptionHandler.CaptureException<string>(ex, ApplicationLayer.Handler, ActionType.Withdraw);
                 _endpointResponse.IsSuccess = false;
                 _endpointResponse.Message = ex.Message;
-
+                var errorEvent = new RegisterErrorEvent
+                {
+                    ErrorMessage = ex.Message,
+                    StackTrace = ex.StackTrace
+                };
                 await _eventPublisherService.PublishEventAsync(
                     entityName: "Withdraw",
                     operationType: "WITHDRAW",
                     success: true,
                     performedBy: "Admin",
                     reason: ex.Message,
-                    additionalData: request,
-                    exchangeName: PublicationExchangeNames.SearchJobs.ToExchangeName(),
+                    additionalData: errorEvent,
+                    exchangeName: PublicationExchangeNames.Job.ToExchangeName(),
                     routingKey: PublicationRoutingKeys.Withdraw_Failed.ToRoutingKey()
-                    //"search_jobs_exchange",
-                    //"search_jobs.withdraw.failed"
                     );
             }
             return _endpointResponse;

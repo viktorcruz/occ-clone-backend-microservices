@@ -1,7 +1,9 @@
 ﻿using MediatR;
 using PublicationsService.Aplication.Dto;
 using PublicationsService.Domain.Interface;
+using SharedKernel.Common.Events;
 using SharedKernel.Common.Extensions;
+using SharedKernel.Common.Interfaces;
 using SharedKernel.Common.Responses;
 using SharedKernel.Interface;
 
@@ -11,7 +13,7 @@ namespace PublicationsService.Aplication.Queries.Handlers
     {
         #region Properties
         private readonly IPublicationDomain _publicationDomain;
-        private readonly IGlobalExceptionHandler _globalExceptionHandler;
+        private readonly IApplicationExceptionHandler _applicationExceptionHandler;
         private readonly IEndpointResponse<RetrieveDatabaseResult<PublicationRetrieveDTO>> _endpointResponse;
         private readonly IEventPublisherService _eventPublisherService;
         #endregion
@@ -19,13 +21,13 @@ namespace PublicationsService.Aplication.Queries.Handlers
         #region Constructor
         public GetPublicationByIdQueryHandler(
             IPublicationDomain publicationDomain,
-            IGlobalExceptionHandler globalExceptionHandler,
+            IApplicationExceptionHandler applicationExceptionHandler,
             IEndpointResponse<RetrieveDatabaseResult<PublicationRetrieveDTO>> endpointResponse,
             IEventPublisherService eventPublisherService
             )
         {
             _publicationDomain = publicationDomain;
-            _globalExceptionHandler = globalExceptionHandler;
+            _applicationExceptionHandler = applicationExceptionHandler;
             _endpointResponse = endpointResponse;
             _eventPublisherService = eventPublisherService;
         }
@@ -87,17 +89,21 @@ namespace PublicationsService.Aplication.Queries.Handlers
             }
             catch (Exception ex)
             {
-                _globalExceptionHandler.HandleGenericException<string>(ex, "GetByIdPublicationQueryHandler");
+                _applicationExceptionHandler.CaptureException<string>(ex, ApplicationLayer.Handler, ActionType.Get);
                 _endpointResponse.IsSuccess = false;
                 _endpointResponse.Message = $"Error getting publication: {ex.Message}";
-
+                var eventError = new RegisterErrorEvent
+                {
+                    ErrorMessage = ex.Message,
+                    StackTrace = ex.StackTrace
+                };
                 await _eventPublisherService.PublishEventAsync(
                         entityName: "Publication",
                         operationType: "GET",
                         success: false,
                         performedBy: "Admin",
                         reason: ex.Message,
-                        additionalData: null,
+                        additionalData: eventError,
                         exchangeName: PublicationExchangeNames.Publication.ToExchangeName(),
                         routingKey: PublicationRoutingKeys.Get_Error.ToRoutingKey()
                     );

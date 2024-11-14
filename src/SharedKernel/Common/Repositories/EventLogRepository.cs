@@ -9,17 +9,17 @@ namespace SharedKernel.Common.Repositories
     {
         private readonly ISqlServerConnectionFactory _sqlServerConnectionFactory;
         private readonly string OCC_Connection = "OCC_Connection";
-        private readonly IGlobalExceptionHandler _globalExceptionHandler;
+        private readonly IApplicationExceptionHandler _applicationExceptionHandler;
         private readonly IDapperExecutor _dapperExecutor;
 
         public EventLogRepository(
             ISqlServerConnectionFactory sqlServerConnectionFactory,
-            IGlobalExceptionHandler globalExceptionHandler,
+            IApplicationExceptionHandler applicationExceptionHandler,
             IDapperExecutor dapperExecutor
         )
         {
             _sqlServerConnectionFactory = sqlServerConnectionFactory;
-            _globalExceptionHandler = globalExceptionHandler;
+            _applicationExceptionHandler = applicationExceptionHandler;
             _dapperExecutor = dapperExecutor;
         }
 
@@ -44,7 +44,7 @@ namespace SharedKernel.Common.Repositories
                     catch (Exception ex)
                     {
                         transaction.Rollback();
-                        _globalExceptionHandler.HandleGenericException<string>(ex, "EventLogsRepository");
+                        _applicationExceptionHandler.CaptureException<string>(ex, ApplicationLayer.Repository, ActionType.Execute);
                     }
                 }
             }

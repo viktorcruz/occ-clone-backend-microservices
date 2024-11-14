@@ -5,6 +5,7 @@ namespace AuthService.Domain.Entities
 {
     public class RegisterEntity
     {
+        public int IdUser { get; set; }
         public int IdRole { get; set; }
         public string FirstName { get; set; }
         public string LastName { get; set; }

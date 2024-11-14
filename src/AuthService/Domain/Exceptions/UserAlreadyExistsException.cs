@@ -1,9 +1,9 @@
-﻿namespace AuthService.Domain.Exceptions
-{
-    public class UserAlreadyExistsException : Exception
-    {
-        public UserAlreadyExistsException(string message) : base(message)
-        {
-        }
-    }
-}
+﻿//namespace AuthService.Domain.Exceptions
+//{
+//    public class UserAlreadyExistsException : Exception
+//    {
+//        public UserAlreadyExistsException(string message) : base(message)
+//        {
+//        }
+//    }
+//}

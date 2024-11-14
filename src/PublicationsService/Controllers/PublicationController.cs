@@ -16,14 +16,14 @@ namespace PublicationsService.Controllers
     {
         #region Properties
         private readonly IMediator _mediator;
-        private readonly IGlobalExceptionHandler _globalExceptionHandler;
+        private readonly IApplicationExceptionHandler _applicationExceptionHandler;
         #endregion
 
         #region Constructor
-        public PublicationController(IMediator mediator, IGlobalExceptionHandler globalExceptionHandler)
+        public PublicationController(IMediator mediator, IApplicationExceptionHandler applicationExceptionHandler)
         {
             _mediator = mediator;
-            _globalExceptionHandler = globalExceptionHandler;
+            _applicationExceptionHandler = applicationExceptionHandler;
         }
         #endregion
 
@@ -47,7 +47,7 @@ namespace PublicationsService.Controllers
             }
             catch (Exception ex)
             {
-                _globalExceptionHandler.HandleGenericException<string>(ex, "PublicationController.CreatePublication");
+                _applicationExceptionHandler.CaptureException<string>(ex, ApplicationLayer.Controller, ActionType.Insert);
                 return StatusCode(500); ;
             }
         }
@@ -67,7 +67,7 @@ namespace PublicationsService.Controllers
             }
             catch (Exception ex)
             {
-                _globalExceptionHandler.HandleGenericException<string>(ex, "PubliactionController");
+                _applicationExceptionHandler.CaptureException<string>(ex, ApplicationLayer.Controller, ActionType.Get);
                 return StatusCode(500);
             }
         }
@@ -88,7 +88,7 @@ namespace PublicationsService.Controllers
             }
             catch (Exception ex)
             {
-                _globalExceptionHandler.HandleGenericException<string>(ex, "PublicationController");
+                _applicationExceptionHandler.CaptureException<string>(ex, ApplicationLayer.Controller, ActionType.FetchAll);
                 return StatusCode(500);
             }
         }
@@ -110,7 +110,7 @@ namespace PublicationsService.Controllers
             }
             catch (Exception ex)
             {
-                _globalExceptionHandler.HandleGenericException<string>(ex, "PublicationController.UpdatePublicationAsync");
+                _applicationExceptionHandler.CaptureException<string>(ex, ApplicationLayer.Controller, ActionType.Update);
                 return StatusCode(500);
             }
         }
@@ -130,7 +130,7 @@ namespace PublicationsService.Controllers
             }
             catch (Exception ex)
             {
-                _globalExceptionHandler.HandleGenericException<string>(ex, "PublicationController");
+                _applicationExceptionHandler.CaptureException<string>(ex, ApplicationLayer.Controller, ActionType.Delete);
                 return StatusCode(500);
             }
         }

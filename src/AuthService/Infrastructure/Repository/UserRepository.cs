@@ -13,14 +13,14 @@ namespace AuthService.Infrastructure.Repository
         #region Properties
         private readonly ISqlServerConnectionFactory _sqlServerConnection;
         private readonly string OCC_Connection = "OCC_Connection";
-        private readonly IGlobalExceptionHandler _globalExceptionHandler;
+        private readonly IApplicationExceptionHandler _applicationExceptionHandler;
         #endregion
 
         #region Constructor
-        public UserRepository(ISqlServerConnectionFactory sqlServerConnection, IGlobalExceptionHandler globalExceptionHandler)
+        public UserRepository(ISqlServerConnectionFactory sqlServerConnection, IApplicationExceptionHandler applicationExceptionHandler)
         {
             _sqlServerConnection = sqlServerConnection;
-            _globalExceptionHandler = globalExceptionHandler;
+            _applicationExceptionHandler = applicationExceptionHandler;
         }
         #endregion
 
@@ -63,15 +63,15 @@ namespace AuthService.Infrastructure.Repository
                 }
                 catch (Exception ex)
                 {
-                    _globalExceptionHandler.HandleGenericException<string>(ex, "UserRepository");
+                    _applicationExceptionHandler.CaptureException<string>(ex, ApplicationLayer.Repository, ActionType.Query);
                 }
-                finally
-                {
-                    if (connection.State == System.Data.ConnectionState.Open)
-                    {
-                        connection.Close();
-                    }
-                }
+                //finally
+                //{
+                //    if (connection.State == System.Data.ConnectionState.Open)
+                //    {
+                //        connection.Close();
+                //    }
+                //}
                 return new RetrieveDatabaseResult<UserByEmailEntity>
                 {
                     ResultStatus = false,
@@ -119,15 +119,15 @@ namespace AuthService.Infrastructure.Repository
                 }
                 catch (Exception ex)
                 {
-                    _globalExceptionHandler.HandleGenericException<string>(ex, "UserRepository");
+                    _applicationExceptionHandler.CaptureException<string>(ex, ApplicationLayer.Repository, ActionType.Query);
                 }
-                finally
-                {
-                    if (connection.State == System.Data.ConnectionState.Open)
-                    {
-                        connection.Close();
-                    }
-                }
+                //finally
+                //{
+                //    if (connection.State == System.Data.ConnectionState.Open)
+                //    {
+                //        connection.Close();
+                //    }
+                //}
                 return new RetrieveDatabaseResult<UserByEmailEntity>
                 {
                     ResultStatus = false,
@@ -178,7 +178,7 @@ namespace AuthService.Infrastructure.Repository
                     catch (Exception ex)
                     {
                         transaction.Rollback();
-                        _globalExceptionHandler.HandleGenericException<string>(ex, "UserRepository");
+                        _applicationExceptionHandler.CaptureException<string>(ex, ApplicationLayer.Repository, ActionType.Update);
                         return await Task.FromResult(new DatabaseResult
                         {
                             ResultStatus = false,
@@ -188,13 +188,6 @@ namespace AuthService.Infrastructure.Repository
                             OperationDateTime = DateTime.Now,
                             ExceptionMessage = ex.Message
                         });
-                    }
-                    finally
-                    {
-                        if (connection.State == ConnectionState.Open)
-                        {
-                            connection.Close();
-                        }
                     }
                 }
             }

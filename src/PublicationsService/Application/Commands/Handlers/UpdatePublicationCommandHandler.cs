@@ -2,6 +2,7 @@
 using PublicationsService.Aplication.Dto;
 using PublicationsService.Application.Dto;
 using PublicationsService.Domain.Interface;
+using SharedKernel.Common.Events;
 using SharedKernel.Common.Extensions;
 using SharedKernel.Common.Interfaces;
 using SharedKernel.Interface;
@@ -13,7 +14,7 @@ namespace PublicationsService.Aplication.Commands.Handlers
         #region Properties
         private readonly IPublicationDomain _publicationDomain;
         private readonly IEventPublisherService _eventPublisherService;
-        private readonly IGlobalExceptionHandler _globalExceptionHandler;
+        private readonly IApplicationExceptionHandler _applicationExceptionHandler;
         private readonly IEndpointResponse<IDatabaseResult> _endpointResponse;
         private readonly IEventBus _eventBus;
         private readonly IEntityOperationEventFactory _entityOperationEventFactory;
@@ -23,7 +24,7 @@ namespace PublicationsService.Aplication.Commands.Handlers
         public UpdatePublicationCommandHandler(
             IPublicationDomain publicationDomain,
             IEventPublisherService eventPublisherService,
-            IGlobalExceptionHandler globalExceptionHandler,
+            IApplicationExceptionHandler applicationExceptionHandler,
             IEndpointResponse<IDatabaseResult> endpointResponse,
             IEventBus eventBus,
             IEntityOperationEventFactory entityOperationEventFactory
@@ -31,7 +32,7 @@ namespace PublicationsService.Aplication.Commands.Handlers
         {
             _publicationDomain = publicationDomain;
             _eventPublisherService = eventPublisherService;
-            _globalExceptionHandler = globalExceptionHandler;
+            _applicationExceptionHandler = applicationExceptionHandler;
             _endpointResponse = endpointResponse;
             _eventBus = eventBus;
             _entityOperationEventFactory = entityOperationEventFactory;
@@ -94,17 +95,21 @@ namespace PublicationsService.Aplication.Commands.Handlers
             }
             catch (Exception ex)
             {
-                _globalExceptionHandler.HandleGenericException<string>(ex, "UpdatePublicationCommand.Handle");
+                _applicationExceptionHandler.CaptureException<string>(ex, ApplicationLayer.Handler, ActionType.Update);
                 _endpointResponse.IsSuccess = false;
                 _endpointResponse.Message = $"Error updating publication: {ex.Message}";
-
+                var eventError = new RegisterErrorEvent
+                {
+                    ErrorMessage = ex.Message,
+                    StackTrace = ex.StackTrace
+                };
                 await _eventPublisherService.PublishEventAsync(
                     entityName: "Publication",
                     operationType: "UPDATE",
                     success: false,
                     performedBy: "Admin",
                     reason: ex.Message,
-                    additionalData: null,
+                    additionalData: eventError,
                     exchangeName: PublicationExchangeNames.Publication.ToExchangeName(),
                     routingKey: PublicationRoutingKeys.Update_Error.ToRoutingKey()
                     );

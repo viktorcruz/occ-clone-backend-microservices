@@ -5,7 +5,6 @@ namespace UsersService.Infrastructure.Interface
 {
     public interface IUserRepository
     {
-        Task<DatabaseResult> CreateUserAsync(AddUserDTO userDTO);
         Task<RetrieveDatabaseResult<UserRetrieveDTO>> GetUserByIdAsync(int userId);
         Task<RetrieveDatabaseResult<List<UserRetrieveDTO>>> GetAllUsersAsync();
         Task<RetrieveDatabaseResult<List<SearchUsersDTO>>> SearchUsersAsync(string firstName, string lastName, string email);

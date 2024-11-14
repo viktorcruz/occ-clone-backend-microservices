@@ -15,43 +15,18 @@ namespace UsersService.Controllers
     {
         #region Properties
         private readonly IMediator _mediator;
-        private readonly IGlobalExceptionHandler _globalExceptionHandler;
+        private readonly IApplicationExceptionHandler _applicationExceptionHandler;
         #endregion
 
         #region Constructor
-        public UserController(IMediator mediator, IGlobalExceptionHandler globalExceptionHandler)
+        public UserController(IMediator mediator, IApplicationExceptionHandler applicationExceptionHandler)
         {
             _mediator = mediator;
-            _globalExceptionHandler = globalExceptionHandler;
+            _applicationExceptionHandler = applicationExceptionHandler;
         }
         #endregion
 
         #region Methods
-        //[HttpPost]
-        //public async Task<IActionResult> CreateUserAsync([FromBody] AddUserDTO userDTO)
-        //{
-        //    try
-        //    {
-        //        if (userDTO.IdRole == 0)
-        //        {
-        //            return BadRequest();
-        //        }
-        //        var command = new CreateUserCommand(userDTO);
-        //        var endpointResponse = await _mediator.Send(command);
-        //        if (endpointResponse.IsSuccess)
-        //        {
-        //            return Ok(endpointResponse);
-        //        }
-        //        return BadRequest(endpointResponse);
-
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        _globalExceptionHandler.HandleGenericException<string>(ex, "UserController.CreateUser");
-        //        return StatusCode(500);
-        //    }
-        //}
-
         [HttpGet("{userId}")]
         public async Task<ActionResult<UserRetrieveDTO>> GetUserByIdAsync(int userId)
         {
@@ -67,7 +42,7 @@ namespace UsersService.Controllers
             }
             catch (Exception ex)
             {
-                _globalExceptionHandler.HandleGenericException<string>(ex, "UserController.GetUserById");
+                _applicationExceptionHandler.CaptureException<string>(ex, ApplicationLayer.Controller, ActionType.Get);
                 return StatusCode(500);
             }
         }
@@ -87,7 +62,7 @@ namespace UsersService.Controllers
             }
             catch (Exception ex)
             {
-                _globalExceptionHandler.HandleGenericException<string>(ex, "UserController.GetAllUsers");
+                _applicationExceptionHandler.CaptureException<string>(ex, ApplicationLayer.Controller, ActionType.FetchAll);
                 return StatusCode(500);
             }
         }
@@ -108,7 +83,7 @@ namespace UsersService.Controllers
             }
             catch (Exception ex)
             {
-                _globalExceptionHandler.HandleGenericException<string>(ex, "UserController.SearchUsers");
+                _applicationExceptionHandler.CaptureException<string>(ex, ApplicationLayer.Controller, ActionType.FetchAll);
                 return StatusCode(500);
             }
         }
@@ -128,7 +103,7 @@ namespace UsersService.Controllers
             }
             catch (Exception ex)
             {
-                _globalExceptionHandler.HandleGenericException<string>(ex, "UserController.UpdateUser");
+                _applicationExceptionHandler.CaptureException<string>(ex, ApplicationLayer.Controller, ActionType.Update);
                 return StatusCode(500);
             }
         }
@@ -148,7 +123,7 @@ namespace UsersService.Controllers
             }
             catch (Exception ex)
             {
-                _globalExceptionHandler.HandleGenericException<string>(ex, "UserController.UpdateUserProfle");
+                _applicationExceptionHandler.CaptureException<string>(ex, ApplicationLayer.Controller, ActionType.Update);
                 return StatusCode(500);
             }
         }
@@ -168,7 +143,7 @@ namespace UsersService.Controllers
             }
             catch (Exception ex)
             {
-                _globalExceptionHandler.HandleGenericException<string>(ex, "UserController");
+                _applicationExceptionHandler.CaptureException<string>(ex, ApplicationLayer.Controller, ActionType.Update);
                 return StatusCode(500);
             }
         }
@@ -188,7 +163,7 @@ namespace UsersService.Controllers
             }
             catch (Exception ex)
             {
-                _globalExceptionHandler.HandleGenericException<string>(ex, "UserController.DeleteUserById");
+                _applicationExceptionHandler.CaptureException<string>(ex, ApplicationLayer.Controller, ActionType.Delete);
                 return StatusCode(500);
             }
         }

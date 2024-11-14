@@ -2,6 +2,6 @@
 {
     Authorize,
     Publication,
-    SearchJobs,
-    Users
+    Job,
+    User
 }

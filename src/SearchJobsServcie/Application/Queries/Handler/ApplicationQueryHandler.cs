@@ -1,7 +1,9 @@
 ﻿using MediatR;
 using SearchJobsService.Application.Dto;
 using SearchJobsService.Domain.Interface;
+using SharedKernel.Common.Events;
 using SharedKernel.Common.Extensions;
+using SharedKernel.Common.Interfaces;
 using SharedKernel.Common.Responses;
 using SharedKernel.Interface;
 
@@ -11,7 +13,7 @@ namespace SearchJobsService.Application.Queries.Handler
     {
         #region Properties
         private readonly ISearchJobsDomain _searchJobsDomain;
-        private readonly IGlobalExceptionHandler _globalExceptionHandler;
+        private readonly IApplicationExceptionHandler _applicationExceptionHandler;
         private readonly IEndpointResponse<RetrieveDatabaseResult<List<UserApplicationsResponseDTO>>> _endpointResponse;
         private readonly IEventPublisherService _eventPublisherService;
         #endregion
@@ -19,13 +21,13 @@ namespace SearchJobsService.Application.Queries.Handler
         #region Constructor
         public ApplicationQueryHandler(
             ISearchJobsDomain searchJobsDomain,
-            IGlobalExceptionHandler globalExceptionHandler,
+            IApplicationExceptionHandler applicationExceptionHandler,
             IEndpointResponse<RetrieveDatabaseResult<List<UserApplicationsResponseDTO>>> endpointResponse,
             IEventPublisherService eventPublisherService
             )
         {
             _searchJobsDomain = searchJobsDomain;
-            _globalExceptionHandler = globalExceptionHandler;
+            _applicationExceptionHandler = applicationExceptionHandler;
             _endpointResponse = endpointResponse;
             _eventPublisherService = eventPublisherService;
         }
@@ -51,7 +53,7 @@ namespace SearchJobsService.Application.Queries.Handler
                         performedBy: "Admin",
                         reason: response?.ResultMessage,
                         additionalData: response.Details,
-                        exchangeName: PublicationExchangeNames.SearchJobs.ToExchangeName(),
+                        exchangeName: PublicationExchangeNames.Job.ToExchangeName(),
                         routingKey: PublicationRoutingKeys.Search_Success.ToRoutingKey()
                         );
                 }
@@ -67,25 +69,29 @@ namespace SearchJobsService.Application.Queries.Handler
                         performedBy: "Admin",
                         reason: "Applicant not found",
                         additionalData: null,
-                        exchangeName: PublicationExchangeNames.SearchJobs.ToExchangeName(),
+                        exchangeName: PublicationExchangeNames.Job.ToExchangeName(),
                         routingKey: PublicationRoutingKeys.Search_Failed.ToRoutingKey()
                         );
                 }
             }
             catch (Exception ex)
             {
-                _globalExceptionHandler.HandleGenericException<string>(ex, "ApplicationByIdQueryHandler");
+                _applicationExceptionHandler.CaptureException<string>(ex, ApplicationLayer.Handler, ActionType.FetchAll);
                 _endpointResponse.IsSuccess = false;
                 _endpointResponse.Message = $"Error getting applications: {ex.Message}";
-
+                var errorEvent = new RegisterErrorEvent
+                {
+                    ErrorMessage = ex.Message,
+                    StackTrace = ex.StackTrace,
+                };
                 await _eventPublisherService.PublishEventAsync(
                     entityName: "Application",
                     operationType: "SEARCH",
                     success: false,
                     performedBy: "Admin",
                     reason: ex.Message,
-                    additionalData: null,
-                    exchangeName: PublicationExchangeNames.SearchJobs.ToExchangeName(),
+                    additionalData: errorEvent,
+                    exchangeName: PublicationExchangeNames.Job.ToExchangeName(),
                     routingKey: PublicationRoutingKeys.Search_Error.ToRoutingKey()
                     );
             }

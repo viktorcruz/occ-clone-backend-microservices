@@ -257,32 +257,3 @@ GO
 
 
 
---exec Usp_JobApplications_Withdraw 2,5
-
---exec Usp_JobApplications_GetAll 2
-
-----UPDATE JobApplications SET STATUS = 0 WHERE IdApplication = 2
-
---select * from JobApplications
-
---select * from SearchJobs
-
---select * from Users
-
---select * from JobTypes
-
---select * from Publications
-
---update JobApplications set status = 0
-
-----; keyword, location, jobType
-
---select * from Publications p
---left
---	join JobTypes t ON p.IdJobType = t.IdJobType
---where p.Location like '%Mexico%' or t.JobTypeName like '%Backend%'
-
---exec Usp_JobApplications_Search 'FULL'
---select * from EventLogs
-
---select * from Eventlogs

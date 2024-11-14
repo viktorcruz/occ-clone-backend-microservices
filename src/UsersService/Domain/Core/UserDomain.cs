@@ -17,11 +17,6 @@ namespace UsersService.Domain.Core
             _userRepository = userRepository;
         }
 
-        public async Task<DatabaseResult> CreateUserAsync(AddUserDTO userDTO)
-        {
-            return await _userRepository.CreateUserAsync(userDTO);
-        }
-
         public async Task<RetrieveDatabaseResult<UserRetrieveDTO>> GetUserByIdAsync(int userId)
         {
             return await _userRepository.GetUserByIdAsync(userId);

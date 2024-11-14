@@ -1,13 +1,10 @@
 ﻿using Dapper;
-using Microsoft.Identity.Client;
-using NuGet.Protocol.Plugins;
 using SearchJobsService.Application.Commands;
 using SearchJobsService.Application.Dto;
 using SearchJobsService.Infrastructure.Interface;
 using SharedKernel.Common.Interfaces;
 using SharedKernel.Common.Responses;
 using SharedKernel.Interface;
-using static System.Net.Mime.MediaTypeNames;
 
 namespace SearchJobsService.Infrastructure.Repository
 {
@@ -16,14 +13,14 @@ namespace SearchJobsService.Infrastructure.Repository
         #region Properties
         private readonly string OCC_Connection = "OCC_Connection";
         private readonly ISqlServerConnectionFactory _sqlServerConnection;
-        private readonly IGlobalExceptionHandler _globalExceptionHandler;
+        private readonly IApplicationExceptionHandler _applicationExceptionHandler;
         #endregion
 
         #region Constructor
-        public SearchJobsRepository(ISqlServerConnectionFactory sqlServerConnection, IGlobalExceptionHandler globalExceptionHandler)
+        public SearchJobsRepository(ISqlServerConnectionFactory sqlServerConnection, IApplicationExceptionHandler applicationExceptionHandler)
         {
             _sqlServerConnection = sqlServerConnection;
-            _globalExceptionHandler = globalExceptionHandler;
+            _applicationExceptionHandler = applicationExceptionHandler;
         }
         #endregion
 
@@ -60,7 +57,7 @@ namespace SearchJobsService.Infrastructure.Repository
                     catch (Exception ex)
                     {
                         transaction.Rollback();
-                        _globalExceptionHandler.HandleGenericException<string>(ex, "SearchJobsRepository.ApplyAsync");
+                        _applicationExceptionHandler.CaptureException<string>(ex, ApplicationLayer.Repository, ActionType.Insert);
                         return new DatabaseResult
                         {
                             ResultStatus = false,
@@ -120,7 +117,7 @@ namespace SearchJobsService.Infrastructure.Repository
                     catch (Exception ex)
                     {
                         transaction.Rollback();
-                        _globalExceptionHandler.HandleGenericException<string>(ex, "SearchJobsRepository");
+                        _applicationExceptionHandler.CaptureException<string>(ex, ApplicationLayer.Repository, ActionType.Withdraw);
                         return new DatabaseResult { ResultStatus = false };
                     }
                     //finally
@@ -147,22 +144,38 @@ namespace SearchJobsService.Infrastructure.Repository
                     parameters.Add("@Keyword", keyword);
 
                     var results = await connection.QueryAsync<JobSearchResultDTO>(query, parameters);
-
-                    return new RetrieveDatabaseResult<List<JobSearchResultDTO>>
+                    var result = results.ToList();
+                    if (result.Any())
                     {
-                        Details = results.ToList(),
-                        ResultStatus = true,
-                        ResultMessage = "",
-                        OperationType = "SEARCH",
-                        AffectedRecordId = 0,
-                        OperationDateTime = DateTime.Now,
-                        ExceptionMessage = ""
-                    };
+                        return new RetrieveDatabaseResult<List<JobSearchResultDTO>>
+                        {
+                            Details = results.ToList(),
+                            ResultStatus = true,
+                            ResultMessage = "Jobs retrieved successfully",
+                            OperationType = "SEARCH",
+                            AffectedRecordId = 0,
+                            OperationDateTime = DateTime.Now,
+                            ExceptionMessage = "No exceptions found"
+                        };
+                    }
+                    else
+                    {
+                        return new RetrieveDatabaseResult<List<JobSearchResultDTO>>
+                        {
+                            Details = null,
+                            ResultStatus = false,
+                            ResultMessage = "No jobs found",
+                            OperationType = "SEARCH",
+                            AffectedRecordId = 0,
+                            OperationDateTime = DateTime.Now,
+                            ExceptionMessage = null
+                        };
+                    }
                 }
             }
             catch (Exception ex)
             {
-                _globalExceptionHandler.HandleGenericException<string>(ex, "SearchJobsRepository");
+                _applicationExceptionHandler.CaptureException<string>(ex, ApplicationLayer.Repository, ActionType.FetchAll);
                 return new RetrieveDatabaseResult<List<JobSearchResultDTO>>
                 {
                     Details = null,
@@ -226,7 +239,7 @@ namespace SearchJobsService.Infrastructure.Repository
             }
             catch (Exception ex)
             {
-                _globalExceptionHandler.HandleGenericException<string>(ex, "SearchJobsRepository");
+                _applicationExceptionHandler.CaptureException<string>(ex, ApplicationLayer.Repository, ActionType.FetchAll);
                 return new RetrieveDatabaseResult<List<UserApplicationsResponseDTO>>
                 {
                     Details = null,

@@ -103,6 +103,11 @@ namespace PublicationsService.Modules.Injection
         public static IServiceCollection AddEventHandler(this IServiceCollection services)
         {
             services.AddScoped<IEventHandler<UserCreatedEvent>, UserCreatedEventHandler>();
+            services.AddScoped<IEventHandler<UserCreatedEvent>, UserCreatedEventHandler>();
+            services.AddScoped<IEventHandler<UserDeletedEvent>, UserDeletedEventHandler>();
+            services.AddScoped<IEventHandler<PublicationCreatedEvent>, PublicationCreatedEventHandler>();
+
+            services.AddScoped<IEventHandler<PublicationCreationFailedEvent>, PublicationCreationFailedEventHandler>();
 
             return services;
         }
@@ -110,7 +115,7 @@ namespace PublicationsService.Modules.Injection
         public static IServiceCollection AddCommonServices(this IServiceCollection services)
         {
             services.AddSingleton<ISqlServerConnectionFactory, SqlServerConnectionFactory>();
-            services.AddSingleton<IGlobalExceptionHandler, GlobalExceptionHandler>();
+            services.AddSingleton<IApplicationExceptionHandler, ApplicationExceptionHandler>();
             services.AddTransient(typeof(IEndpointResponse<>), typeof(EndpointResponse<>));
             services.AddTransient<IDatabaseResult, DatabaseResult>();
             services.AddValidatorsFromAssemblyContaining<CreatePublicationCommandValidator>();

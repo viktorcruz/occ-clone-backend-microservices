@@ -1,14 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace SharedKernel.Common.Events
+﻿namespace PublicationsService.Application.EventListeners
 {
     public class PublicationCreationFailedEvent
     {
-        public string Reason { get; set; }
-        public string PerformedBy { get; set; }
+        public int IdUser { get; set; }
+        public string ErrorMessage { get; set; }
+        public DateTime TimeStamp { get; set; } = DateTime.Now;
     }
 }

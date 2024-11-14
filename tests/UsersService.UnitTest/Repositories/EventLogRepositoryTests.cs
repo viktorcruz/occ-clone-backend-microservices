@@ -15,7 +15,7 @@ namespace UsersService.UnitTest.Repositories
             // Arrange
             var mockDbConnection = new Mock<IDbConnection>();
             var mockDbTransaction = new Mock<IDbTransaction>();
-            var mockGlobalExceptionHandler = new Mock<IGlobalExceptionHandler>();
+            var mockGlobalExceptionHandler = new Mock<IApplicationExceptionHandler>();
             var mockDapperExecutor = new Mock<IDapperExecutor>();
 
             mockDbConnection.Setup(conn => conn.State).Returns(ConnectionState.Closed);

@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace SharedKernel.Common.Events
 {
-    public class SearchJobsApplyEvent
+    public class JobSearchApplyEvent
     {
         public int IdPublication { get; set; }
         public int IdApplicant { get; set; }

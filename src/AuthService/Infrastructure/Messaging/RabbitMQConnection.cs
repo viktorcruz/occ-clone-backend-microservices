@@ -1,4 +1,5 @@
 ﻿using RabbitMQ.Client;
+using SharedKernel.Interface;
 
 namespace AuthService.Infrastructure.Messaging
 {

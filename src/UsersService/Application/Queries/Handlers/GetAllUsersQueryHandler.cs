@@ -1,5 +1,7 @@
 ﻿using MediatR;
+using SharedKernel.Common.Events;
 using SharedKernel.Common.Extensions;
+using SharedKernel.Common.Interfaces;
 using SharedKernel.Common.Responses;
 using SharedKernel.Interface;
 using UsersService.Application.Dto;
@@ -11,7 +13,7 @@ namespace UsersService.Application.Queries.Handlers
     {
         #region Properties
         private readonly IUserDomain _usersDomain;
-        private readonly IGlobalExceptionHandler _globalExceptionHandler;
+        private readonly IApplicationExceptionHandler _applicationExceptionHandler;
         private readonly IEndpointResponse<RetrieveDatabaseResult<List<UserRetrieveDTO>>> _endpointResponse;
         private readonly IEventPublisherService _eventPublisherService;
         #endregion
@@ -19,13 +21,13 @@ namespace UsersService.Application.Queries.Handlers
         #region Constructor
         public GetAllUsersQueryHandler(
             IUserDomain usersDomain,
-            IGlobalExceptionHandler globalExceptionHandler,
+            IApplicationExceptionHandler applicationExceptionHandler,
             IEndpointResponse<RetrieveDatabaseResult<List<UserRetrieveDTO>>> endpointResponse,
             IEventPublisherService eventPublisherService
             )
         {
             _usersDomain = usersDomain;
-            _globalExceptionHandler = globalExceptionHandler;
+            _applicationExceptionHandler = applicationExceptionHandler;
             _endpointResponse = endpointResponse;
             _eventPublisherService = eventPublisherService;
         }
@@ -56,7 +58,7 @@ namespace UsersService.Application.Queries.Handlers
                         performedBy: "Admin",
                         reason: response?.ResultMessage,
                         additionalData: additionalData,
-                        exchangeName: PublicationExchangeNames.Users.ToExchangeName(),
+                        exchangeName: PublicationExchangeNames.User.ToExchangeName(),
                         routingKey: PublicationRoutingKeys.GetAll_Success.ToRoutingKey()
                         );
                 }
@@ -72,24 +74,29 @@ namespace UsersService.Application.Queries.Handlers
                         performedBy: "Admin",
                         reason: response?.ResultMessage ?? "User not found",
                         additionalData: response,
-                        exchangeName: PublicationExchangeNames.Users.ToExchangeName(),
+                        exchangeName: PublicationExchangeNames.User.ToExchangeName(),
                         routingKey: PublicationRoutingKeys.GetAll_Failed.ToRoutingKey()
                         );
                 }
             }
             catch (Exception ex)
             {
-                _globalExceptionHandler.HandleGenericException<string>(ex, "GetAllUserQuery.Handle");
+                _applicationExceptionHandler.CaptureException<string>(ex, ApplicationLayer.Handler, ActionType.FetchAll);
                 _endpointResponse.IsSuccess = false;
                 _endpointResponse.Message = ex.Message;
-
+                var errorEvent = new RegisterErrorEvent
+                {
+                    ErrorMessage = ex.Message,
+                    StackTrace = ex.StackTrace
+                };
                 await _eventPublisherService.PublishEventAsync(
                     entityName: "User",
                     operationType: "GETALL",
                     success: false,
                     performedBy: "Admin",
-                    reason: "Data not found",
-                    exchangeName: PublicationExchangeNames.Users.ToExchangeName(),
+                    reason: ex.Message,
+                    additionalData: errorEvent,
+                    exchangeName: PublicationExchangeNames.User.ToExchangeName(),
                     routingKey: PublicationRoutingKeys.GetAll_Error.ToRoutingKey()
                     );
             }

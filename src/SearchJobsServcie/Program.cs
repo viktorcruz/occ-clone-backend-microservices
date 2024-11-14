@@ -7,6 +7,9 @@ using FluentValidation.AspNetCore;
 using SearchJobsService.Application.Queries;
 using SharedKernel.Common.Events;
 using SharedKernel.Common.Interfaces;
+using SharedKernel.Common.Extensions;
+using SearchJobsService.Application.EventListeners;
+using PublicationsService.Application.EventListeners;
 
 var builder = WebApplication.CreateBuilder(args);
 var configurationManager = builder.Configuration;
@@ -39,19 +42,32 @@ builder.Logging.SetMinimumLevel(LogLevel.Debug);
 builder.Logging.AddFilter("Microsoft.AspNetCore.Authentication", LogLevel.Trace);
 builder.Logging.AddFilter("Microsoft.AspNetCore", LogLevel.Debug);
 
-// Construye la aplicación
+builder.Services.AddEventRouter();
+
+builder.Services.AddScoped<IEventHandler<UserCreatedEvent>, UserCreatedEventHandler>();
+builder.Services.AddScoped<IEventHandler<UserUpdatedEvent>, UserUpdatedEventHandler>();
+builder.Services.AddScoped<IEventHandler<PublicationCreatedEvent>, PublicationCreatedEventHandler>();
+builder.Services.AddScoped<IEventHandler<JobSearchApplyEvent>, SearchJobsApplyEventHandler>();
+builder.Services.AddScoped<IEventHandler<PublicationCreationFailedEvent>, PublicationCreationFailedEventHandler>();
 var app = builder.Build();
 
-// Usa el `ServiceProvider` de `app.Services` para resolver `IEventBus`
-var eventBus = app.Services.GetRequiredService<IEventBus>();
-
-// Crear y configurar el EventRouter para este microservicio
-var eventRouter = new EventRouter(app.Services, eventBus);
-
 // Registrar eventos en el EventRouter
-eventRouter.RegisterEventHandler<UserCreatedEvent>("user_exchange", "user.created");
-eventRouter.RegisterEventHandler<UserUpdatedEvent>("user_exchange", "user.updated");
-eventRouter.RegisterEventHandler<PublicationCreatedEvent>("publication_exchange", "publication.created");
+app.UseEventRouter()
+    .Use(async (context, next) =>
+    {
+        var eventRouter = context.RequestServices.GetRequiredService<EventRouter>();
+
+        // manejadores de eventos especificos de este microservices
+        eventRouter.RegisterEventHandler<UserCreatedEvent>(PublicationExchangeNames.User.ToExchangeName(), PublicationRoutingKeys.Created.ToRoutingKey());
+        eventRouter.RegisterEventHandler<UserUpdatedEvent>(PublicationExchangeNames.User.ToExchangeName(), PublicationRoutingKeys.Updated.ToRoutingKey());
+        eventRouter.RegisterEventHandler<PublicationCreatedEvent>(PublicationExchangeNames.Publication.ToExchangeName(), PublicationRoutingKeys.Created.ToRoutingKey());
+        eventRouter.RegisterEventHandler<PublicationCreationFailedEvent>(PublicationExchangeNames.Publication.ToExchangeName(), PublicationRoutingKeys.Create_Failed.ToRoutingKey());
+        // eventos de saga y otros eventos especificos
+        eventRouter.RegisterEventHandler<JobSearchApplyEvent>(PublicationExchangeNames.Job.ToExchangeName(), PublicationRoutingKeys.Apply.ToRoutingKey());
+
+        await next.Invoke();
+    });
+
 
 
 if (app.Environment.IsDevelopment())

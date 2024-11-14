@@ -1,7 +1,8 @@
 ﻿using AuthService.Application.DTO;
 using AuthService.Domain.Ports.Output;
-using AuthService.Infrastructure.Services.Interfaces;
+using SharedKernel.Common.Events;
 using SharedKernel.Common.Extensions;
+using SharedKernel.Common.Interfaces;
 using SharedKernel.Interface;
 
 namespace AuthService.Infrastructure.Adapters
@@ -11,19 +12,19 @@ namespace AuthService.Infrastructure.Adapters
         #region Properties
         private readonly IUserPort _userRepository;
         private readonly IEventPublisherService _eventPublisherService;
-        private readonly IGlobalExceptionHandler _globalExceptionHandler;
+        private readonly IApplicationExceptionHandler _applicationExceptionHandler;
         #endregion
 
         #region Constructor
         public RenewTokenAdapter(
             IUserPort userRepository,
             IEventPublisherService eventPublisherService,
-            IGlobalExceptionHandler globalExceptionHandler
+            IApplicationExceptionHandler applicationExceptionHandler
             )
         {
             _userRepository = userRepository;
             _eventPublisherService = eventPublisherService;
-            _globalExceptionHandler = globalExceptionHandler;
+            _applicationExceptionHandler = applicationExceptionHandler;
         }
         #endregion
 
@@ -43,7 +44,7 @@ namespace AuthService.Infrastructure.Adapters
                     };
                 }
 
-                await _eventPublisherService.PublishEventAsyn(
+                await _eventPublisherService.PublishEventAsync(
                     entityName: "Authorize",
                     operationType: "Renew",
                     success: true,
@@ -61,15 +62,19 @@ namespace AuthService.Infrastructure.Adapters
             }
             catch (Exception ex)
             {
-                _globalExceptionHandler.HandleGenericException<string>(ex, "RenewAdapter");
-
-                await _eventPublisherService.PublishEventAsyn(
+                _applicationExceptionHandler.CaptureException<string>(ex, ApplicationLayer.Adapter, ActionType.Renew);
+                var registerErrorEvent = new RegisterErrorEvent
+                {
+                    ErrorMessage = ex.Message,
+                    StackTrace = ex.StackTrace
+                };
+                await _eventPublisherService.PublishEventAsync(
                     entityName: "Authorize",
                     operationType: "Renew",
                     success: false,
                     performedBy: "Admin",
                     reason: ex.Message,
-                    additionalData: null,
+                    additionalData: registerErrorEvent,
                     exchangeName: PublicationExchangeNames.Authorize.ToExchangeName(),
                     routingKey: PublicationRoutingKeys.Renew_Error.ToRoutingKey()
                     );

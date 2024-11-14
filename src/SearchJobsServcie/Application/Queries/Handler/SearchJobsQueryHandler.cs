@@ -1,7 +1,9 @@
 ﻿using MediatR;
 using SearchJobsService.Application.Dto;
 using SearchJobsService.Domain.Interface;
+using SharedKernel.Common.Events;
 using SharedKernel.Common.Extensions;
+using SharedKernel.Common.Interfaces;
 using SharedKernel.Common.Responses;
 using SharedKernel.Interface;
 
@@ -11,7 +13,7 @@ namespace SearchJobsService.Application.Queries.Handler
     {
         #region Properties
         private readonly ISearchJobsDomain _searchJobsDomain;
-        private readonly IGlobalExceptionHandler _globalExceptionHandler;
+        private readonly IApplicationExceptionHandler _applicationExceptionHandler;
         private readonly IEndpointResponse<RetrieveDatabaseResult<List<JobSearchResultDTO>>> _endpointResponse;
         private readonly IEventPublisherService _eventPublisherService;
         #endregion
@@ -19,13 +21,13 @@ namespace SearchJobsService.Application.Queries.Handler
         #region Constructor
         public SearchJobsQueryHandler(
             ISearchJobsDomain searchJobsDomain,
-            IGlobalExceptionHandler globalExceptionHandler,
+            IApplicationExceptionHandler applicationExceptionHandler,
             IEndpointResponse<RetrieveDatabaseResult<List<JobSearchResultDTO>>> endpointResponse,
             IEventPublisherService eventPublisherService
             )
         {
             _searchJobsDomain = searchJobsDomain;
-            _globalExceptionHandler = globalExceptionHandler;
+            _applicationExceptionHandler = applicationExceptionHandler;
             _endpointResponse = endpointResponse;
             _eventPublisherService = eventPublisherService;
         }
@@ -52,13 +54,13 @@ namespace SearchJobsService.Application.Queries.Handler
                     _endpointResponse.Result = response;
 
                     await _eventPublisherService.PublishEventAsync(
-                        entityName: "Search Jobs",
+                        entityName: "Job",
                         operationType: "SEARCH",
                         success: true,
                         performedBy: "Admin",
                         reason: response?.ResultMessage ?? "Job not found",
                         additionalData: response?.Details,
-                        exchangeName: PublicationExchangeNames.SearchJobs.ToExchangeName(),
+                        exchangeName: PublicationExchangeNames.Job.ToExchangeName(),
                         routingKey: PublicationRoutingKeys.Search_Success.ToRoutingKey()
                         );
                 }
@@ -68,31 +70,35 @@ namespace SearchJobsService.Application.Queries.Handler
                     _endpointResponse.Message = "Job not found";
 
                     await _eventPublisherService.PublishEventAsync(
-                        entityName: "SearchJobs",
+                        entityName: "Job",
                         operationType: "SEARCH",
                         success: false,
                         performedBy: "Admin",
                         reason: response?.ResultMessage ?? "Job not found",
                         additionalData: response?.Details ?? null,
-                        exchangeName: PublicationExchangeNames.SearchJobs.ToExchangeName(),
+                        exchangeName: PublicationExchangeNames.Job.ToExchangeName(),
                         routingKey: PublicationRoutingKeys.Search_Failed.ToRoutingKey()
                         );
                 }
             }
             catch (Exception ex)
             {
-                _globalExceptionHandler.HandleGenericException<string>(ex, "SearchJobsQueryHandler");
+                _applicationExceptionHandler.CaptureException<string>(ex, ApplicationLayer.Handler, ActionType.FetchAll);
                 _endpointResponse.IsSuccess = false;
                 _endpointResponse.Message = ex.Message;
-
+                var errorEvent = new RegisterErrorEvent
+                {
+                    ErrorMessage = ex.Message,
+                    StackTrace = ex.StackTrace
+                };
                 await _eventPublisherService.PublishEventAsync(
-                        entityName: "SearchJobs",
+                        entityName: "Job",
                         operationType: "SEARCH",
                         success: false,
                         performedBy: "Admin",
-                        reason: "Job not found",
-                        additionalData: null,
-                        exchangeName: PublicationExchangeNames.SearchJobs.ToExchangeName(),
+                        reason: ex.Message,
+                        additionalData: errorEvent,
+                        exchangeName: PublicationExchangeNames.Job.ToExchangeName(),
                         routingKey: PublicationRoutingKeys.Search_Error.ToRoutingKey()
                     );
             }

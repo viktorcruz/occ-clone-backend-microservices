@@ -37,7 +37,7 @@ namespace SharedKernel.Common.Messaging
             var message = SerializerEvent.SerializeOrdered((IEntityOperationEvent)@event);
             var body = Encoding.UTF8.GetBytes(message);
 
-            _channel.ExchangeDeclare(exchange, "direct", durable: true);
+            _channel.ExchangeDeclare(exchange, ExchangeType.Topic, durable: true);
             _channel.BasicPublish(exchange, routingKey, null, body);
 
             var parameters = new DynamicParameters();
@@ -53,42 +53,27 @@ namespace SharedKernel.Common.Messaging
 
         public void Subscribe<T>(string exchange, string routingKey, Func<T, Task> handler)
         {
-            string environmentPrefix = "dev";
-            string _routingKey = $"{environmentPrefix}.{routingKey}";
-            string exchangeName = $"{environmentPrefix}.{exchange}"; 
+            var consumer = new AsyncEventingBasicConsumer(_channel);
 
-#if DEBUG
-            _channel.QueueDelete(_routingKey);
-#endif
-            // Declarar el intercambio con el nombre correcto
-            _channel.ExchangeDeclare(
-                exchange: exchangeName,  // Usar el nombre correcto del intercambio
-                type: ExchangeType.Topic,
-                durable: true,
-                autoDelete: false,
-                arguments: null
-            );
-
-            // Declarar la cola usando el nombre completo con prefijo de entorno
-            _channel.QueueDeclare(_routingKey, durable: true, exclusive: false, autoDelete: false, arguments: null);
-
-            // Vincular la cola al intercambio correcto
-            _channel.QueueBind(
-                queue: _routingKey,
-                exchange: exchangeName,  // Usar el nombre correcto del intercambio
-                routingKey: _routingKey
-            );
-
-            var consumer = new EventingBasicConsumer(_channel);
             consumer.Received += async (model, ea) =>
             {
                 var body = ea.Body.ToArray();
                 var message = Encoding.UTF8.GetString(body);
                 var @event = JsonSerializer.Deserialize<T>(message);
-                await handler(@event);
+
+                if (@event != null)
+                {
+                    await handler(@event);
+                }
             };
 
-            _channel.BasicConsume(queue: _routingKey, autoAck: true, consumer: consumer);
+            _channel.ExchangeDeclare(exchange, ExchangeType.Topic, durable: true);
+            _channel.QueueDeclare(queue: routingKey, durable: true, exclusive: false, autoDelete: false, arguments: null);
+            _channel.QueueBind(queue:routingKey, exchange: exchange, routingKey: routingKey);
+
+            _channel.BasicConsume(queue: routingKey, autoAck:true, consumer: consumer);
+
+            _logger.LogInformation($"Subscribed to exchange: {exchange} with routing key {routingKey}");
         }
 
         public Task PublishAsync<T>(string exchange, string routingKey, T @event)

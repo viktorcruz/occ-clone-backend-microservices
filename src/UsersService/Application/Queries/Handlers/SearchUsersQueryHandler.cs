@@ -1,5 +1,7 @@
 ﻿using MediatR;
+using SharedKernel.Common.Events;
 using SharedKernel.Common.Extensions;
+using SharedKernel.Common.Interfaces;
 using SharedKernel.Common.Responses;
 using SharedKernel.Interface;
 using UsersService.Application.Dto;
@@ -11,7 +13,7 @@ namespace UsersService.Application.Queries.Handlers
     {
         #region Properties
         private readonly IUserDomain _userDomain;
-        private readonly IGlobalExceptionHandler _globalExceptionHandler;
+        private readonly IApplicationExceptionHandler _applicationExceptionHandler;
         private readonly IEndpointResponse<RetrieveDatabaseResult<List<SearchUsersDTO>>> _endpointResponse;
         private readonly IEventPublisherService _eventPublisherService;
         #endregion
@@ -19,13 +21,13 @@ namespace UsersService.Application.Queries.Handlers
         #region Constructor
         public SearchUsersQueryHandler(
             IUserDomain userDomain,
-            IGlobalExceptionHandler globalExceptionHandler,
+            IApplicationExceptionHandler applicationExceptionHandler,
             IEndpointResponse<RetrieveDatabaseResult<List<SearchUsersDTO>>> endpointResponse,
             IEventPublisherService eventPublisherService
             )
         {
             _userDomain = userDomain;
-            _globalExceptionHandler = globalExceptionHandler;
+            _applicationExceptionHandler = applicationExceptionHandler;
             _endpointResponse = endpointResponse;
             _eventPublisherService = eventPublisherService;
         }
@@ -66,7 +68,7 @@ namespace UsersService.Application.Queries.Handlers
                         performedBy: "Admin",
                         reason: response?.ResultMessage ?? "User not found",
                         additionalData: additionalData,
-                        exchangeName: PublicationExchangeNames.Users.ToExchangeName(),
+                        exchangeName: PublicationExchangeNames.User.ToExchangeName(),
                         routingKey: PublicationRoutingKeys.Search_Success.ToRoutingKey()
                         );
                 }
@@ -82,25 +84,29 @@ namespace UsersService.Application.Queries.Handlers
                         performedBy: "Admin",
                         reason: response?.ResultMessage ?? "Data not found",
                         additionalData: response,
-                        exchangeName: PublicationExchangeNames.Users.ToExchangeName(),
+                        exchangeName: PublicationExchangeNames.User.ToExchangeName(),
                         routingKey: PublicationRoutingKeys.Search_Failed.ToRoutingKey()
                         );
                 }
             }
             catch (Exception ex)
             {
-                _globalExceptionHandler.HandleGenericException<string>(ex, "SearchUsersQueryHandler");
+                _applicationExceptionHandler.CaptureException<string>(ex, ApplicationLayer.Handler, ActionType.FetchAll);
                 _endpointResponse.IsSuccess = false;
                 _endpointResponse.Message = ex.Message;
-
+                var errorEvent = new RegisterErrorEvent
+                {
+                    ErrorMessage = ex.Message,
+                    StackTrace = ex.StackTrace
+                };
                 await _eventPublisherService.PublishEventAsync(
                     entityName: "User",
                     operationType: "SEARCH",
                     success: true,
                     performedBy: "Admin",
-                    reason: "User not found",
-                    additionalData: null,
-                    exchangeName: PublicationExchangeNames.Users.ToExchangeName(),
+                    reason: ex.Message,
+                    additionalData: errorEvent,
+                    exchangeName: PublicationExchangeNames.User.ToExchangeName(),
                     routingKey: PublicationRoutingKeys.Search_Error.ToRoutingKey()
                     );
             }

@@ -1,6 +1,6 @@
 ﻿namespace UsersService.Application.Dto
 {
-    public class AddUserDTO
+    public class UserCreateDTO
     {
         public int IdRole { get; set; }
         public string FirstName { get; set; }

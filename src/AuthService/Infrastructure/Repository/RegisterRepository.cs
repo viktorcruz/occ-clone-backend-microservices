@@ -1,6 +1,7 @@
 ﻿using AuthService.Domain.Entities;
 using AuthService.Domain.Ports.Output;
 using Dapper;
+using SharedKernel.Common.Events;
 using SharedKernel.Common.Interfaces;
 using SharedKernel.Common.Responses;
 using SharedKernel.Interface;
@@ -13,14 +14,14 @@ namespace AuthService.Infrastructure.Repository
         #region Properties
         private readonly ISqlServerConnectionFactory _sqlServerConnection;
         private readonly string OCC_Connection = "OCC_Connection";
-        private readonly IGlobalExceptionHandler _globalExceptionHandler;
+        private readonly IApplicationExceptionHandler _applicationExceptionHandler;
         #endregion
 
         #region Constructor
-        public RegisterRepository(ISqlServerConnectionFactory sqlServerConnection, IGlobalExceptionHandler globalExceptionHandler)
+        public RegisterRepository(ISqlServerConnectionFactory sqlServerConnection, IApplicationExceptionHandler applicationExceptionHandler)
         {
             _sqlServerConnection = sqlServerConnection;
-            _globalExceptionHandler = globalExceptionHandler;
+            _applicationExceptionHandler = applicationExceptionHandler;
         }
         #endregion
 
@@ -59,7 +60,8 @@ namespace AuthService.Infrastructure.Repository
                     catch (Exception ex)
                     {
                         transaction.Rollback();
-                        _globalExceptionHandler.HandleGenericException<string>(ex, "RegisterRepository.AddAsync");
+                        _applicationExceptionHandler.CaptureException<string>(ex, ApplicationLayer.Repository, ActionType.Insert);
+                       
                         return new DatabaseResult
                         {
                             ResultStatus = false,
@@ -69,13 +71,6 @@ namespace AuthService.Infrastructure.Repository
                             OperationDateTime = DateTime.Now,
                             ExceptionMessage = ex.Message
                         };
-                    }
-                    finally
-                    {
-                        if (connection.State == System.Data.ConnectionState.Open)
-                        {
-                            connection.Close();
-                        }
                     }
 
                     return new DatabaseResult

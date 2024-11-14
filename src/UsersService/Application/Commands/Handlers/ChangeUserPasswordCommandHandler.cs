@@ -7,19 +7,19 @@ namespace UsersService.Application.Commands.Handlers
     public class ChangeUserPasswordCommandHandler : IRequestHandler<ChangeUserPasswordCommand, IEndpointResponse<IDatabaseResult>>
     {
         #region Properties
-        private readonly IGlobalExceptionHandler _globalExceptionHandler;
+        private readonly IApplicationExceptionHandler _applicationExceptionHandler;
         private readonly IEndpointResponse<IDatabaseResult> _endpointResponse;
         private readonly IEventBus _eventBus;
         #endregion
 
         #region Constructor
         public ChangeUserPasswordCommandHandler(
-            IGlobalExceptionHandler globalExceptionHandler,
+            IApplicationExceptionHandler applicationExceptionHandler,
             IEndpointResponse<IDatabaseResult> endpointResponse,
             IEventBus eventBus
             )
         {
-            _globalExceptionHandler = globalExceptionHandler;
+            _applicationExceptionHandler = applicationExceptionHandler;
             _endpointResponse = endpointResponse;
             _eventBus = eventBus;
 
@@ -36,7 +36,7 @@ namespace UsersService.Application.Commands.Handlers
             //}
             //catch ( Exception ex )
             //{
-            //_globalExceptionHandler.HandleGenericException<string>(ex, "ChangeUserPasswordHandler");
+            //_applicationExceptionHandler.HandleGenericException<string>(ex, "ChangeUserPasswordHandler");
             //_endpointResponse.Message = $"Error changing password: {ex.Message}";
             //_endpointResponse.IsSuccess = false;
 

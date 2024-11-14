@@ -39,7 +39,7 @@ namespace AuthService.Infrastructure.Messaging
             var body = Encoding.UTF8.GetBytes(message);
 
             // TODO: declare the exchange and  publish the message
-            _channel.ExchangeDeclare(exchange, "direct", durable: true);
+            _channel.ExchangeDeclare(exchange, ExchangeType.Topic, durable: true);
             _channel.BasicPublish(exchange, routingKey, null, body);
 
             // TODO: save the log of the published event in the db

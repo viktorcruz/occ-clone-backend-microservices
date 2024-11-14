@@ -81,6 +81,11 @@ BEGIN
 	DROP TABLE [dbo].[JobApplications]
 END
 GO
+IF EXISTS(SELECT 1 FROM SYS.OBJECTS WHERE OBJECT_ID = OBJECT_ID(N'[dbo].[AppLogs]'))
+BEGIN 
+	DROP TABLE [dbo].[AppLogs]
+END
+GO
 
 CREATE TABLE Roles
 (
@@ -219,6 +224,24 @@ CREATE TABLE EventLogs (
     RoutingKey NVARCHAR(100) NOT NULL,
     CreatedAt DATETIME NOT NULL DEFAULT GETDATE()
 );
+
+CREATE TABLE [dbo].[AppLogs] (
+    Id INT IDENTITY(1,1) PRIMARY KEY,
+	Environment NVARCHAR(255),
+	IdCorrelation NVARCHAR(255),
+	Method NVARCHAR(255),
+    CallSite NVARCHAR(MAX),
+    Date DATETIME,
+    Exception NVARCHAR(MAX),
+    Level NVARCHAR(50),
+    Logger NVARCHAR(255),
+    MachineName NVARCHAR(255),
+    Message NVARCHAR(MAX),
+    StackTrace NVARCHAR(MAX),
+    Thread NVARCHAR(50),
+    Username NVARCHAR(255)
+);
+
 
 /******
 

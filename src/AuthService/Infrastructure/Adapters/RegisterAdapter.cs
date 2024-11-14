@@ -3,8 +3,9 @@ using AuthService.Application.DTO;
 using AuthService.Domain.Entities;
 using AuthService.Domain.Ports.Output;
 using AuthService.Infrastructure.Security;
-using AuthService.Infrastructure.Services.Interfaces;
+using SharedKernel.Common.Events;
 using SharedKernel.Common.Extensions;
+using SharedKernel.Common.Interfaces;
 using SharedKernel.Interface;
 
 namespace AuthService.Infrastructure.Adapters
@@ -15,7 +16,7 @@ namespace AuthService.Infrastructure.Adapters
         private readonly IRegisterUserPort _registerRepository;
         private readonly IUserPort _userRepository;
         private readonly IEventPublisherService _eventPublisherService;
-        private readonly IGlobalExceptionHandler _globalExceptionHandler;
+        private readonly IApplicationExceptionHandler _applicationExceptionHandler;
         #endregion
 
         #region Constructor
@@ -23,19 +24,19 @@ namespace AuthService.Infrastructure.Adapters
             IRegisterUserPort registerRepository,
             IUserPort userRepository,
             IEventPublisherService eventPublisherService,
-            IGlobalExceptionHandler globalExceptionHandler
+            IApplicationExceptionHandler applicationExceptionHandler
             )
         {
             _registerRepository = registerRepository;
             _userRepository = userRepository;
             _eventPublisherService = eventPublisherService;
-            _globalExceptionHandler = globalExceptionHandler;
-            _globalExceptionHandler = globalExceptionHandler;
+            _applicationExceptionHandler = applicationExceptionHandler;
+            _applicationExceptionHandler = applicationExceptionHandler;
         }
         #endregion
 
         #region Methods
-        public async Task<RegisterUserDTO> RegisterAsync(RegisterCommand command)
+        public async Task<RegisterUserDTO?> RegisterAsync(RegisterCommand command)
         {
             try
             {
@@ -66,7 +67,9 @@ namespace AuthService.Infrastructure.Adapters
 
                 var response = await _registerRepository.AddAsync(newUser);
 
-                await _eventPublisherService.PublishEventAsyn(
+                newUser.IdUser = response.AffectedRecordId;
+
+                await _eventPublisherService.PublishEventAsync(
                     entityName: "Authorize",
                     operationType: "Register",
                     success: true,
@@ -94,19 +97,25 @@ namespace AuthService.Infrastructure.Adapters
             }
             catch (Exception ex)
             {
-                _globalExceptionHandler.HandleGenericException<string>(ex, "RegisterAdapter");
+                _applicationExceptionHandler.CaptureException<string>(ex, ApplicationLayer.Adapter, ActionType.Register);
 
-                await _eventPublisherService.PublishEventAsyn(
+                var registerErrorEvent = new RegisterErrorEvent
+                {
+                    ErrorMessage = ex.Message,
+                    StackTrace = ex.StackTrace
+                };
+
+                await _eventPublisherService.PublishEventAsync(
                     entityName: "Authorize",
                     operationType: "Register",
                     success: false,
                     performedBy: "Admin",
                     reason: ex.Message,
-                    additionalData: null,
+                    additionalData: registerErrorEvent,
                     exchangeName: PublicationExchangeNames.Authorize.ToExchangeName(),
                     routingKey: PublicationRoutingKeys.Register_Error.ToRoutingKey()
                     );
-                
+
                 return null;
             }
         }

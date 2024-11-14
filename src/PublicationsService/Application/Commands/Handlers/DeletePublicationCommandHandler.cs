@@ -1,5 +1,6 @@
 ﻿using MediatR;
 using PublicationsService.Domain.Interface;
+using SharedKernel.Common.Events;
 using SharedKernel.Common.Extensions;
 using SharedKernel.Common.Interfaces;
 using SharedKernel.Interface;
@@ -11,7 +12,7 @@ namespace PublicationsService.Aplication.Commands.Handlers
         #region Properties
         private readonly IPublicationDomain _publicationDomain;
         private readonly IEventPublisherService _eventPublisherService;
-        private readonly IGlobalExceptionHandler _globalExceptionHandler;
+        private readonly IApplicationExceptionHandler _applicationExceptionHandler;
         private readonly IEndpointResponse<IDatabaseResult> _endpointResponse;
         #endregion
 
@@ -19,13 +20,13 @@ namespace PublicationsService.Aplication.Commands.Handlers
         public DeletePublicationCommandHandler(
             IPublicationDomain publicationDomain,
             IEventPublisherService eventPublisherService,
-            IGlobalExceptionHandler globalExceptionHandler,
+            IApplicationExceptionHandler applicationExceptionHandler,
             IEndpointResponse<IDatabaseResult> endpointResponse
             )
         {
             _publicationDomain = publicationDomain;
             _eventPublisherService = eventPublisherService;
-            _globalExceptionHandler = globalExceptionHandler;
+            _applicationExceptionHandler = applicationExceptionHandler;
             _endpointResponse = endpointResponse;
         }
         #endregion
@@ -79,17 +80,21 @@ namespace PublicationsService.Aplication.Commands.Handlers
             }
             catch (Exception ex)
             {
-                _globalExceptionHandler.HandleGenericException<string>(ex, "DeletePublicationCommand.Handle");
+                _applicationExceptionHandler.CaptureException<string>(ex, ApplicationLayer.Handler, ActionType.Delete);
                 _endpointResponse.IsSuccess = false;
                 _endpointResponse.Message = $"Error deleting publication: {ex.Message}";
-
+                var registerErrorEvent = new RegisterErrorEvent
+                {
+                    ErrorMessage = ex.Message,
+                    StackTrace = ex.StackTrace
+                };
                 await _eventPublisherService.PublishEventAsync(
                         entityName: "Publication",
                         operationType: "DELETE",
                         success: false,
                         performedBy: "Admin",
                         reason: ex.Message,
-                        additionalData: null,
+                        additionalData: registerErrorEvent,
                         exchangeName: PublicationExchangeNames.Publication.ToExchangeName(),
                         routingKey: PublicationRoutingKeys.Delete_Error.ToRoutingKey()
                         );

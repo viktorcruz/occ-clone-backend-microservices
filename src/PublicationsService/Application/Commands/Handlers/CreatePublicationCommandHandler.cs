@@ -1,6 +1,8 @@
 ﻿using MediatR;
 using PublicationsService.Domain.Interface;
+using SharedKernel.Common.Events;
 using SharedKernel.Common.Extensions;
+using SharedKernel.Common.Interfaces;
 using SharedKernel.Interface;
 
 namespace PublicationsService.Aplication.Commands.Handlers
@@ -10,7 +12,7 @@ namespace PublicationsService.Aplication.Commands.Handlers
         #region Properties
         private readonly IPublicationDomain _publicationDomain;
         private readonly IEventPublisherService _eventPublisherService;
-        private readonly IGlobalExceptionHandler _globalExceptionHandler;
+        private readonly IApplicationExceptionHandler _applicationExceptionHandler;
         private readonly IEndpointResponse<IDatabaseResult> _endpointResponse;
         #endregion
 
@@ -18,13 +20,13 @@ namespace PublicationsService.Aplication.Commands.Handlers
         public CreatePublicationCommandHandler(
             IPublicationDomain publicationDomain,
             IEventPublisherService eventPublisherService,
-            IGlobalExceptionHandler globalExceptionHandler,
+            IApplicationExceptionHandler applicationExceptionHandler,
             IEndpointResponse<IDatabaseResult> endpointResponse
             )
         {
             _publicationDomain = publicationDomain;
             _eventPublisherService = eventPublisherService;
-            _globalExceptionHandler = globalExceptionHandler;
+            _applicationExceptionHandler = applicationExceptionHandler;
             _endpointResponse = endpointResponse;
         }
         #endregion
@@ -79,26 +81,29 @@ namespace PublicationsService.Aplication.Commands.Handlers
                         reason: response?.ResultMessage,
                         additionalData: null,
                         exchangeName: PublicationExchangeNames.Publication.ToExchangeName(),
-                        routingKey: PublicationRoutingKeys.Insert_Failed.ToRoutingKey()
+                        routingKey: PublicationRoutingKeys.Create_Failed.ToRoutingKey()
                         );
                 }
             }
             catch (Exception ex)
             {
-                _globalExceptionHandler.HandleGenericException<string>(ex, "CreatePublicationCommandHandler");
-
+                _applicationExceptionHandler.CaptureException<string>(ex, ApplicationLayer.Repository, ActionType.Query);
                 _endpointResponse.IsSuccess = false;
                 _endpointResponse.Message = $"Error creating publication: {ex.Message}";
-
+                var registerErrorEvent = new RegisterErrorEvent
+                {
+                    ErrorMessage = ex.Message,
+                    StackTrace = ex.StackTrace
+                };
                 await _eventPublisherService.PublishEventAsync(
                     entityName: "Publication",
                     operationType: "CREATE",
                     success: false,
                     performedBy: "Admin",
                     reason: ex.Message,
-                    additionalData: null,
+                    additionalData: registerErrorEvent,
                     exchangeName: PublicationExchangeNames.Publication.ToExchangeName(),
-                    routingKey: PublicationRoutingKeys.Insert_Error.ToRoutingKey()
+                    routingKey: PublicationRoutingKeys.Create_Error.ToRoutingKey()
                     );
             }
 

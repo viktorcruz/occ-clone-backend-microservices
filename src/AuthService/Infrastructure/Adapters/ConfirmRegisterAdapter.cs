@@ -1,8 +1,9 @@
 ﻿using AuthService.Application.Commands;
 using AuthService.Application.DTO;
 using AuthService.Domain.Ports.Output;
-using AuthService.Infrastructure.Services.Interfaces;
+using SharedKernel.Common.Events;
 using SharedKernel.Common.Extensions;
+using SharedKernel.Common.Interfaces;
 using SharedKernel.Interface;
 
 namespace AuthService.Infrastructure.Adapters
@@ -12,7 +13,7 @@ namespace AuthService.Infrastructure.Adapters
         #region Properties
         private readonly IUserPort _userRepository;
         private readonly IEventPublisherService _eventPublisherService;
-        private readonly IGlobalExceptionHandler _globalExceptionHandler;
+        private readonly IApplicationExceptionHandler _applicationExceptionHandler;
 
         #endregion
 
@@ -20,11 +21,11 @@ namespace AuthService.Infrastructure.Adapters
         public ConfirmRegisterAdapter(
             IUserPort userRepository,
             IEventPublisherService eventPublisherService,
-            IGlobalExceptionHandler globalExceptionHandler
+            IApplicationExceptionHandler applicationExceptionHandler
             )
         {
             _userRepository = userRepository;
-            _globalExceptionHandler = globalExceptionHandler;
+            _applicationExceptionHandler = applicationExceptionHandler;
             _eventPublisherService = eventPublisherService;
         }
         #endregion
@@ -58,7 +59,7 @@ namespace AuthService.Infrastructure.Adapters
                     RegistrationConfirmationDescription = "User registration is confirmed"
                 };
 
-                await _eventPublisherService.PublishEventAsyn(
+                await _eventPublisherService.PublishEventAsync(
                     entityName: "Authorize",
                     operationType: "Login",
                     success: true,
@@ -72,15 +73,19 @@ namespace AuthService.Infrastructure.Adapters
             }
             catch (Exception ex)
             {
-                _globalExceptionHandler.HandleGenericException<string>(ex, "ConfirmRegisterAdapter");
-
-                await _eventPublisherService.PublishEventAsyn(
+                _applicationExceptionHandler.CaptureException<string>(ex, ApplicationLayer.Adapter, ActionType.Update);
+                var errorEvent = new RegisterErrorEvent
+                {
+                    ErrorMessage = ex.Message,
+                    StackTrace = ex.StackTrace
+                };
+                await _eventPublisherService.PublishEventAsync(
                     entityName: "Auhotize",
                     operationType: "Login",
                     success: false,
                     performedBy: "Admin",
                     reason: ex.Message,
-                    additionalData: ex.StackTrace,
+                    additionalData: errorEvent,
                     exchangeName: PublicationExchangeNames.Authorize.ToExchangeName(),
                     routingKey: PublicationRoutingKeys.Confirmation_Error.ToRoutingKey()
                     );

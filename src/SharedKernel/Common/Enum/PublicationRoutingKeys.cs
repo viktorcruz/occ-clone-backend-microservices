@@ -1,20 +1,25 @@
 ﻿public enum PublicationRoutingKeys
 {
+    Created,
+    Updated,
+    Deleted,
+    Apply,
     Apply_Success,
     Apply_Error,
     Apply_Failed,
     Confirmation_Success,
     Confirmation_Error,
     Confirmation_Failed,
+    Failed,
     Get_Success,
     Get_Error,
     Get_Failed,
     GetAll_Success,
     GetAll_Error,
     GetAll_Failed,
-    Insert_Success,
-    Insert_Error,
-    Insert_Failed,
+    Create_Success,
+    Create_Error,
+    Create_Failed,
     Login_Success,
     Login_Error,
     Login_Failed,
@@ -30,10 +35,49 @@
     Renew_Success,
     Renew_Error,
     Renew_Failed,
+    Revert,
+    Search,
     Search_Success,
     Search_Error,
     Search_Failed,
+    Withdraw,
     Withdraw_Success,
     Withdraw_Error,
     Withdraw_Failed,
+}
+
+public enum PublicationActions
+{
+    Created,
+    Updated,
+    Deleted,
+    Applied,
+    Confirmed,
+    Failed,
+    Retrieved,
+    RetrievedAll,
+    CreatedSuccess,
+    CreatedError,
+    CreatedFailed,
+    LoggedIn,
+    UpdatedSuccess,
+    UpdatedError,
+    UpdatedFailed,
+    DeletedSuccess,
+    DeletedError,
+    DeletedFailed,
+    Registered,
+    Renewed,
+    Reverted,
+    Searched,
+    Withdrawn,
+    // Agrega otras acciones específicas según sea necesario
+}
+
+// Opcional: Agregar otro enum para los estados, si prefieres descomponer aún más.
+public enum ActionStatus
+{
+    Success,
+    Error,
+    Failed
 }

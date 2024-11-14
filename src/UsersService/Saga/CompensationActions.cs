@@ -1,47 +1,53 @@
-﻿//using UsersService.Infrastructure.Interface;
+﻿using SharedKernel.Common.Events;
+using SharedKernel.Common.Extensions;
+using SharedKernel.Common.Interfaces;
+using UsersService.Infrastructure.Interface;
 
-//namespace UsersService.Saga
-//{
-//    public class CompensationActions
-//    {
-//        private readonly IUserRepository _userRepository;
-//        private readonly IPublicationService _publicationService;
-//        private readonly ISearchJobsService _searchJobsService;
+namespace UsersService.Saga
+{
+    public class CompensationActions
+    {
+        private readonly IUserRepository _userRepository;
+        private readonly IEventPublisherService _eventPublisherService;
+        public CompensationActions(
+            IUserRepository userRepository, 
+            IEventPublisherService eventPublisherService
+        )
+        {
+            _userRepository = userRepository;
+            _eventPublisherService = eventPublisherService;
+        }
 
-//        public CompensationActions(
-//            IUserRepository userRepository,
-//            IPublicationService publicationService,
-//            ISearchJobsService searchJobsService
-//        )
-//        {
-//            _userRepository = userRepository;
-//            _publicationService = publicationService;
-//            _searchJobsService = searchJobsService;
-//        }
+        public async Task CompensateCreateUserAsync(UserSagaContext sagaState)
+        {
+            if (sagaState.IsJobSearchUpdated)
+            {
+                // publicar evento de reversion para searchJobsService
+                var jobSearchReverEvent = new JobSearchRevertEvent
+                {
+                    IdUser = sagaState.IdUser
+                };
 
-//        public async Task CompensateCreateUserAsync(UserSagaContext sagaState)
-//        {
-//            if (sagaState.IsJobSearchUpdated)
-//            {
-//                // Revertir la actualización en SearchJobsService
-//                await _searchJobsService.RevertJobSearchUpdateAsync(sagaState.IdUser);
-//                sagaState.IsJobSearchUpdated = false;
-//            }
+                await _eventPublisherService.PublicEventAsync(
+                    exchangeName: PublicationExchangeNames.Job.ToExchangeName(),
+                    routingKey: PublicationRoutingKeys.Revert.ToRoutingKey(),
+                    eventMessage: jobSearchReverEvent
+                    );
+            }
 
-//            if (sagaState.IdPublication != 0)
-//            {
-//                // Revertir la creación de la publicación
-//                await _publicationService.DeletePublicationAsync(sagaState.IdPublication);
-//                sagaState.IdPublication = 0;
-//            }
+            if (sagaState.IdPublication != 0)
+            {
+                // Revertir la creación de la publicación
+                //await _publicationService.DeletePublicationAsync(sagaState.IdPublication);
+                sagaState.IdPublication = 0;
+            }
 
-//            if (sagaState.IdUser != 0)
-//            {
-//                // Revertir la creación del usuario
-//                await _userRepository.DeleteUserAsync(sagaState.IdUser);
-//                sagaState.IdUser = 0;
-//            }
-//        }
-//    }
-
-//}
+            if (sagaState.IdUser != 0)
+            {
+                // Revertir la creación del usuario
+                await _userRepository.DeleteUserAsync(sagaState.IdUser);
+                sagaState.IdUser = 0;
+            }
+        }
+    }
+}

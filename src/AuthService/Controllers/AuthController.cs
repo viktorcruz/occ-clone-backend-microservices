@@ -1,6 +1,8 @@
 ﻿using AuthService.Application.Commands;
 using AuthService.Application.Interfaces;
 using Microsoft.AspNetCore.Mvc;
+using SharedKernel.Common.Extensions;
+using SharedKernel.Interface;
 
 namespace AuthService.Controllers
 {
@@ -13,6 +15,7 @@ namespace AuthService.Controllers
         private readonly IRegisterUseCase _registerUseCase;
         private readonly IRenewTokenUseCase _renewTokenUseCase;
         private readonly IConfirRegisterUserCase _confirRegisterUserCase;
+        private readonly IApplicationExceptionHandler _applicationExceptionHandler;
         #endregion
 
         #region Constructor
@@ -20,13 +23,15 @@ namespace AuthService.Controllers
             ILoginUseCase loginUseCase,
             IRegisterUseCase registerUseCase,
             IRenewTokenUseCase renewTokenUseCase,
-            IConfirRegisterUserCase confirRegisterUserCase
+            IConfirRegisterUserCase confirRegisterUserCase,
+            IApplicationExceptionHandler applicationExceptionHandler
             )
         {
             _loginUseCase = loginUseCase;
             _registerUseCase = registerUseCase;
             _renewTokenUseCase = renewTokenUseCase;
             _confirRegisterUserCase = confirRegisterUserCase;
+            _applicationExceptionHandler = applicationExceptionHandler;
         }
         #endregion
 
@@ -45,10 +50,12 @@ namespace AuthService.Controllers
             }
             catch (UnauthorizedAccessException ex)
             {
+                _applicationExceptionHandler.CaptureException<string>(ex, ApplicationLayer.Controller, ActionType.Login);
                 return Unauthorized(ex.Message);
             }
             catch (Exception ex)
             {
+                _applicationExceptionHandler.CaptureException<string>(ex, ApplicationLayer.Controller, ActionType.Login);
                 return StatusCode(500, "Internal server error");
             }
         }
@@ -70,10 +77,12 @@ namespace AuthService.Controllers
             }
             catch (UnauthorizedAccessException ex)
             {
+                _applicationExceptionHandler.CaptureException<string>(ex, ApplicationLayer.Controller, ActionType.Register);
                 return Unauthorized(ex.Message);
             }
             catch (Exception ex)
             {
+                _applicationExceptionHandler.CaptureException<string>(ex, ApplicationLayer.Controller, ActionType.Register);
                 return StatusCode(500, "Internal server error");
             }
         }
@@ -93,10 +102,12 @@ namespace AuthService.Controllers
             }
             catch (UnauthorizedAccessException ex)
             {
+                _applicationExceptionHandler.CaptureException<string>(ex, ApplicationLayer.Controller, ActionType.Renew);
                 return Unauthorized(ex.Message);
             }
             catch (Exception ex)
             {
+                _applicationExceptionHandler.CaptureException<string>(ex, ApplicationLayer.Controller, ActionType.Renew);
                 return StatusCode(500, "Internal server error");
             }
         }
@@ -113,11 +124,13 @@ namespace AuthService.Controllers
             }
             catch (UnauthorizedAccessException ex)
             {
+                _applicationExceptionHandler.CaptureException<string>(ex, ApplicationLayer.Controller, ActionType.Update);
                 return Unauthorized(ex.Message);
             }
             catch (Exception ex)
             {
-                return StatusCode(500, ex.Message);
+                _applicationExceptionHandler.CaptureException<string>(ex, ApplicationLayer.Controller, ActionType.Update);
+                return StatusCode(500, "Internal server error");
             }
         }
         #endregion

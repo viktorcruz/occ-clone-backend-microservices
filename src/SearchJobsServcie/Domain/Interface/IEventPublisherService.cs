@@ -1,23 +1,23 @@
-﻿namespace SearchJobsService.Domain.Interface
-{
-    public interface IEventPublisherService
-    {
-        Task PublishEventAsync(
-            string entityName,
-            string operationType,
-            bool success,
-            string performedBy,
-            string? reason = null,
-            object? additionalData = null,
-            string exchangeName = "default_exchange",
-            string routingKey = "default_key"
-            );
+﻿//namespace SearchJobsService.Domain.Interface
+//{
+//    public interface IEventPublisherService
+//    {
+//        Task PublishEventAsync(
+//            string entityName,
+//            string operationType,
+//            bool success,
+//            string performedBy,
+//            string? reason = null,
+//            object? additionalData = null,
+//            string exchangeName = "default_exchange",
+//            string routingKey = "default_key"
+//            );
 
-        //Task PublishWithdrawEventAsync(
-        //    bool success,
-        //    string performedBy,
-        //    string? reason = null,
-        //    object? additionalData = null
-        //    );
-    }
-}
+//        //Task PublishWithdrawEventAsync(
+//        //    bool success,
+//        //    string performedBy,
+//        //    string? reason = null,
+//        //    object? additionalData = null
+//        //    );
+//    }
+//}

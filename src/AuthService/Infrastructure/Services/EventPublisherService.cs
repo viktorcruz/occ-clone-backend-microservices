@@ -1,5 +1,4 @@
 ﻿using AuthService.Domain.Interfaces;
-using AuthService.Infrastructure.Services.Interfaces;
 using SharedKernel.Common.Interfaces;
 
 namespace AuthService.Infrastructure.Services
@@ -15,10 +14,17 @@ namespace AuthService.Infrastructure.Services
             _eventBus = eventBus;
         }
 
-        public async Task PublishEventAsyn(string entityName, string operationType, bool success, string performedBy, string? reason = null, object? additionalData = null, string exchangeName = "default_exchange", string routingKey = "default_key")
+
+        public async Task PublishEventAsync(string entityName, string operationType, bool success, string performedBy, string? reason = null, object? additionalData = null, string exchangeName = "default_exchange", string routingKey = "default_key")
         {
             var entityEvent = _eventFactory.CreateEvent(entityName, operationType, success, performedBy, reason, additionalData);
             _eventBus.Publish(exchangeName, routingKey, entityEvent);
+            await Task.CompletedTask;
+        }
+
+        public async Task PublicEventAsync<T>(string exchangeName, string routingKey, T eventMessage)
+        {
+            _eventBus.Publish(exchangeName, routingKey, eventMessage);
             await Task.CompletedTask;
         }
     }

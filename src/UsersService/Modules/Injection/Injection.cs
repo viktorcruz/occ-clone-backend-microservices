@@ -1,4 +1,5 @@
 ﻿using SharedKernel.Common;
+using SharedKernel.Common.Events;
 using SharedKernel.Common.Exceptions;
 using SharedKernel.Common.Interfaces;
 using SharedKernel.Common.Messaging;
@@ -15,6 +16,7 @@ using UsersService.Events;
 using UsersService.Events.Handlers;
 using UsersService.Infrastructure.Interface;
 using UsersService.Infrastructure.Repository;
+using UsersService.Saga;
 using UsersService.SharedKernel.Service;
 using UsersService.SharedKernel.Service.Interface;
 
@@ -101,10 +103,26 @@ namespace UsersService.Modules.Injection
 
         public static IServiceCollection AddEventHandler(this IServiceCollection services)
         {
-            services.AddTransient<IEventHandler<UserCreatedEvent>, UserCreatedEventHandler>();
+            //services.AddTransient<IEventHandler<UserCreatedEvent>, UserCreatedEventHandler>();
             services.AddScoped<IEventPublisherService, EventPublisherService>();
+            services.AddSingleton<EventRouter>();
+            services.AddScoped<IEventHandler<RegisterSuccessEvent>, UserSagaHandler>();
+            services.AddScoped<IEventHandler<RegisterErrorEvent>, UserSagaHandler>();
+            services.AddScoped<CompensationActions>();
+            services.AddScoped<UserSagaContext>();
             //services.AddTransient<IEventHandler<UserCreationSucceededEvent>, UserSagaHandler>();
             //services.AddTransient<IEventHandler<UserCreationFailedEvent>, UserSagaHandler>();
+
+
+            //services.AddScoped<IEventHandler<SearchJobsApplyEvent>, SearchJobsApplyEventHandler>();
+            //services.AddScoped<IEventHandler<UserCreatedEvent>, UserCreatedEventHandler>();
+            //services.AddScoped<IEventHandler<UserUpdatedEvent>, UserUpdatedEventHandler>();
+            //services.AddScoped<IEventHandler<PublicationCreatedEvent>, PublicationCreatedEventHandler>();
+
+            // Otros registros de servicios
+            // builder.Services.AddScoped<ISearchJobsService, SearchJobsService>();
+            // builder.Services.AddScoped<IPublicationService, PublicationService>();
+            // ...
 
             return services;
         }
@@ -112,7 +130,7 @@ namespace UsersService.Modules.Injection
         public static IServiceCollection AddCommonServices(this IServiceCollection services)
         {
             services.AddSingleton<ISqlServerConnectionFactory, SqlServerConnectionFactory>();
-            services.AddSingleton<IGlobalExceptionHandler, GlobalExceptionHandler>();
+            services.AddSingleton<IApplicationExceptionHandler, ApplicationExceptionHandler>();
             services.AddTransient(typeof(IEndpointResponse<>), typeof(EndpointResponse<>));
             services.AddTransient<IDatabaseResult, DatabaseResult>();
             services.AddSingleton<IDapperExecutor, DapperExecutor>();

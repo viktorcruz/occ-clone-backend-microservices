@@ -1,4 +1,7 @@
 ﻿using MediatR;
+using Microsoft.AspNetCore.Http.Connections;
+using SharedKernel.Common.Events;
+using SharedKernel.Common.Extensions;
 using SharedKernel.Common.Interfaces;
 using SharedKernel.Interface;
 using UsersService.Domain.Interface;
@@ -9,26 +12,23 @@ namespace UsersService.Application.Commands.Handlers
     {
         #region Properties
         private readonly IUserDomain _usersDomain;
-        private readonly IGlobalExceptionHandler _globalExceptionHandler;
+        private readonly IApplicationExceptionHandler _applicationExceptionHandler;
         private readonly IEndpointResponse<IDatabaseResult> _endpointResponse;
-        private readonly IEventBus _eventBus;
-        private readonly IEntityOperationEventFactory _entityOperationEventFactory;
+        private readonly IEventPublisherService _eventPublisherService;
         #endregion
 
         #region Constructor
         public DeleteUserCommandHandler(
             IUserDomain usersDomain,
-            IGlobalExceptionHandler globalExceptionHandler,
+            IApplicationExceptionHandler applicationExceptionHandler,
             IEndpointResponse<IDatabaseResult> endpointResponse,
-            IEventBus eventBus,
-            IEntityOperationEventFactory entityOperationEventFactory
+            IEventPublisherService eventPublisherService
             )
         {
             _usersDomain = usersDomain;
-            _globalExceptionHandler = globalExceptionHandler;
+            _applicationExceptionHandler = applicationExceptionHandler;
             _endpointResponse = endpointResponse;
-            _eventBus = eventBus;
-            _entityOperationEventFactory = entityOperationEventFactory;
+            _eventPublisherService = eventPublisherService;
         }
         #endregion
 
@@ -52,39 +52,54 @@ namespace UsersService.Application.Commands.Handlers
                         IsDeleted = true
                     };
 
-                    var eventInstance = _entityOperationEventFactory.CreateEvent(
+                    await _eventPublisherService.PublishEventAsync(
                         entityName: "User",
-                        operationType: "Delete",
+                        operationType: "DELETE",
                         success: true,
                         performedBy: "Admin",
                         reason: response.ResultStatus.ToString(),
-                        additionalData: additionalData
+                        additionalData: additionalData,
+                        exchangeName: PublicationExchangeNames.User.ToExchangeName(),
+                        routingKey: PublicationRoutingKeys.Delete_Success.ToRoutingKey()
                         );
-
-                    _eventBus.Publish("user_exchange", "user.deleted", eventInstance);
                 }
                 else
                 {
                     _endpointResponse.IsSuccess = false;
                     _endpointResponse.Message = response?.ResultMessage ?? "User not found";
+
+                    await _eventPublisherService.PublishEventAsync(
+                        entityName: "User",
+                        operationType: "DELETE",
+                        success: false,
+                        performedBy: "Admin",
+                        reason: response?.ResultMessage ?? "User not found",
+                        additionalData: null,
+                        exchangeName: PublicationExchangeNames.User.ToExchangeName(),
+                        routingKey: PublicationRoutingKeys.Delete_Failed.ToRoutingKey()
+                        );
                 }
             }
             catch (Exception ex)
             {
-                _globalExceptionHandler.HandleGenericException<string>(ex, "DeleteUserCommand.Handle");
+                _applicationExceptionHandler.CaptureException<string>(ex, ApplicationLayer.Handler, ActionType.Delete);
                 _endpointResponse.IsSuccess = false;
                 _endpointResponse.Message = $"Error deleting user: {ex.Message}";
-
-                var failedEvent = _entityOperationEventFactory.CreateEvent(
+                var errorEvent = new RegisterErrorEvent
+                {
+                    ErrorMessage = ex.Message,
+                    StackTrace = ex.StackTrace
+                };
+                await _eventPublisherService.PublishEventAsync(
                     entityName: "User",
-                    operationType: "Delete",
+                    operationType: "DELETE",
                     success: true,
                     performedBy: "Admin",
                     reason: ex.Message,
-                    additionalData: null
+                    additionalData: errorEvent,
+                    exchangeName: PublicationExchangeNames.User.ToExchangeName(),
+                    routingKey: PublicationRoutingKeys.Delete_Error.ToRoutingKey()
                     );
-                _eventBus.Publish("user_exchange", "user.deleted.failed", failedEvent);
-
             }
             return _endpointResponse;
         }

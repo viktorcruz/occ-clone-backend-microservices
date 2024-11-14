@@ -110,7 +110,7 @@ namespace SearchJobsService.Modules.Injection
 
         private static IServiceCollection AddCommonServices(this IServiceCollection services, IConfiguration configuration)
         {
-            services.AddSingleton<IGlobalExceptionHandler, GlobalExceptionHandler>();
+            services.AddSingleton<IApplicationExceptionHandler, ApplicationExceptionHandler>();
             services.AddTransient(typeof(IEndpointResponse<>), typeof(EndpointResponse<>));
             services.AddTransient<IDatabaseResult, DatabaseResult>();
             services.AddSingleton<IConfiguration>(configuration);
