@@ -1,5 +1,6 @@
 ﻿using SharedKernel.Common.Responses;
 using UsersService.Application.Dto;
+using UsersService.Domain.Entity;
 using UsersService.Domain.Interface;
 using UsersService.Infrastructure.Interface;
 
@@ -42,9 +43,19 @@ namespace UsersService.Domain.Core
             return await _userRepository.UpdateUserProfileAsync(userDTO);
         }
 
+        public async Task<DatabaseResult> ChangeUserPasswordAsync(int userId, string password, string email)
+        {
+            return await _userRepository.ChangeUserPasswordAsync(userId, password, email);
+        }
+
         public async Task<DatabaseResult> DeleteUserAsync(int userId)
         {
             return await _userRepository.DeleteUserAsync(userId);
+        }
+
+        public async Task<RetrieveDatabaseResult<UserByEmailEntity>> GetByEmailAsync(string email)
+        {
+            return await _userRepository.GetByEmailAsync(email);
         }
 
 

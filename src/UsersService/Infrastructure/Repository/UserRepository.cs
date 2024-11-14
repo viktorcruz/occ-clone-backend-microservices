@@ -4,6 +4,7 @@ using SharedKernel.Common.Responses;
 using SharedKernel.Interface;
 using System.Data;
 using UsersService.Application.Dto;
+using UsersService.Domain.Entity;
 using UsersService.Infrastructure.Interface;
 
 namespace UsersService.Infrastructure.Repository
@@ -300,7 +301,62 @@ namespace UsersService.Infrastructure.Repository
                             AffectedRecordId = 0,
                             OperationDateTime = DateTime.Now,
                             ExceptionMessage = ex.Message
-                        }); ;
+                        });
+                    }
+                }
+            }
+        }
+
+        public async Task<DatabaseResult> ChangeUserPasswordAsync(int userId, string password, string email)
+        {
+            using (var connection = _sqlServerConnection.GetConnection(OCC_Connection))
+            {
+                connection.Open();
+
+                using (var transaction = connection.BeginTransaction())
+                {
+                    try
+                    {
+                        var query = "Ups_UserPassword_Update";
+                        var parameters = new DynamicParameters();
+                        parameters.Add("@IdUser", userId);
+                        parameters.Add("@Email", email);
+                        parameters.Add("@PasswordHash", password);
+
+                        var results = await connection.QuerySingleAsync<DatabaseResult>(query, parameters, transaction, commandType: CommandType.StoredProcedure);
+
+                        transaction.Commit();
+
+                        if (results != null || Convert.ToBoolean(results?.ResultStatus))
+                        {
+                            return results;
+                        }
+                        else
+                        {
+                            return await Task.FromResult(
+                                new DatabaseResult
+                                {
+                                    ResultStatus = false,
+                                    ResultMessage = "User not found",
+                                    AffectedRecordId = 0,
+                                    OperationDateTime = DateTime.Now,
+                                    ExceptionMessage = "No exceptions found"
+                                });
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        transaction.Rollback();
+                        _applicationExceptionHandler.CaptureException<string>(ex, ApplicationLayer.Repository, ActionType.Update);
+                        return await Task.FromResult(new DatabaseResult
+                        {
+                            ResultStatus = false,
+                            ResultMessage = ex.Message,
+                            OperationType = "UPDATE",
+                            AffectedRecordId = 0,
+                            OperationDateTime = DateTime.Now,
+                            ExceptionMessage = ex.Message
+                        });
                     }
                 }
             }
@@ -341,6 +397,56 @@ namespace UsersService.Infrastructure.Repository
                         return new DatabaseResult();
                     }
                 }
+            }
+        }
+
+        public async Task<RetrieveDatabaseResult<UserByEmailEntity>> GetByEmailAsync(string email)
+        {
+            using (var connection = _sqlServerConnection.GetConnection(OCC_Connection))
+            {
+                connection.Open();
+                try
+                {
+                    var query = "Usp_UsersByCredentials_Get";
+                    var parameters = new DynamicParameters();
+                    parameters.Add("@Email", email);
+
+                    var results = await connection.QueryAsync<dynamic>(query, parameters, commandType: CommandType.StoredProcedure);
+                    var response = results.FirstOrDefault();
+
+                    if (response.ResultStatus)
+                    {
+                        var spResult = new RetrieveDatabaseResult<UserByEmailEntity>
+                        {
+                            ResultStatus = response.ResultStatus,
+                            ResultMessage = response.ResultMessage,
+                            OperationType = response.OperationType,
+                            AffectedRecordId = response.AffectedRecordId,
+                            Details = new UserByEmailEntity
+                            {
+                                IdUser = response.IdUser,
+                                IdRole = response.IdRole,
+                                Email = response.Email,
+                                PasswordHash = response.PasswordHash,
+                                IsActive = response.IsActive,
+                                IsRegistrationConfirmed = response.IsRegistrationConfirmed,
+                            }
+                        };
+                        return spResult;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _applicationExceptionHandler.CaptureException<string>(ex, ApplicationLayer.Repository, ActionType.Get);
+                }
+                return new RetrieveDatabaseResult<UserByEmailEntity>
+                {
+                    ResultStatus = false,
+                    ResultMessage = null,
+                    OperationType = null,
+                    AffectedRecordId = 0,
+                    Details = null
+                };
             }
         }
 

@@ -160,7 +160,7 @@ BEGIN
         IF NOT EXISTS (SELECT 1 FROM [dbo].[JobApplications] WHERE IdApplicant = @IdApplicant AND IdPublication = @IdPublication)
         BEGIN 
             INSERT INTO @Result (ResultStatus, ResultMessage, OperationType, AffectedRecordId, OperationDateTime)
-            VALUES (0, 'Error: applicant not found', 'NONE', NULL, GETDATE());
+            VALUES (0, 'Error: applicant not found', 'UPDATE', NULL, GETDATE());
 
             ROLLBACK TRANSACTION;
             RETURN;

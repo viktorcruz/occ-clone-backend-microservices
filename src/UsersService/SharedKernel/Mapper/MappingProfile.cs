@@ -8,7 +8,7 @@ namespace UsersService.SharedKernel.Mapper
     {
         public MappingProfile()
         {
-            CreateMap<UserEntity, UserRetrieveDTO>().ReverseMap();
+            //CreateMap<UserByEmailEntity, UserRetrieveDTO>().ReverseMap();
         }
     }
 }

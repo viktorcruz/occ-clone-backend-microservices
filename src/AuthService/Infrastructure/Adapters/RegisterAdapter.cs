@@ -67,22 +67,22 @@ namespace AuthService.Infrastructure.Adapters
 
                 var response = await _registerRepository.AddAsync(newUser);
 
+                if (!response.ResultStatus && response.AffectedRecordId == 0)
+                {
+                    throw new Exception(response.ExceptionMessage);
+                }
+
                 newUser.IdUser = response.AffectedRecordId;
 
                 await _eventPublisherService.PublishEventAsync(
                     entityName: "Authorize",
                     operationType: "Register",
                     success: true,
-                    performedBy: response.ResultMessage,
+                    performedBy: "Admin",
                     additionalData: newUser,
                     exchangeName: PublicationExchangeNames.Authorize.ToExchangeName(),
                     routingKey: PublicationRoutingKeys.Register_Success.ToRoutingKey()
                     );
-
-                if (!response.ResultStatus && response.AffectedRecordId == 0)
-                {
-                    throw new Exception(response.ResultStatus.ToString());
-                }
 
                 var userResponse = new RegisterUserDTO
                 {

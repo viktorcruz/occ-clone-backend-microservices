@@ -133,6 +133,14 @@ namespace UsersService.Controllers
         {
             try 
             {
+                if(passwordDTO.NewPassword.Length < 8)
+                {
+                    return BadRequest("Your password must be at least 8 characters");
+                }
+                if(passwordDTO.CurrentPassword == passwordDTO.NewPassword)
+                {
+                    return BadRequest("New password cannot be the same as your old password");
+                }
                 var command = new ChangeUserPasswordCommand(passwordDTO);
                 var endpointResponse = await _mediator.Send(command);
                 if (endpointResponse.IsSuccess)

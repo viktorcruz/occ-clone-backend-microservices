@@ -65,13 +65,7 @@ namespace AuthService.Infrastructure.Repository
                 {
                     _applicationExceptionHandler.CaptureException<string>(ex, ApplicationLayer.Repository, ActionType.Query);
                 }
-                //finally
-                //{
-                //    if (connection.State == System.Data.ConnectionState.Open)
-                //    {
-                //        connection.Close();
-                //    }
-                //}
+
                 return new RetrieveDatabaseResult<UserByEmailEntity>
                 {
                     ResultStatus = false,

@@ -47,7 +47,7 @@ BEGIN
 		END
         
         INSERT INTO @Result(ResultStatus, ResultMessage, OperationType, AffectedRecordId, OperationDateTime)
-        VALUES(0, ERROR_MESSAGE(), 'ERROR', NULL, GETDATE());
+        VALUES(0, ERROR_MESSAGE(), 'INSERT', NULL, GETDATE());
         
     END CATCH
 
@@ -187,7 +187,7 @@ BEGIN
 			IF NOT EXISTS(SELECT 1 FROM Publications WHERE IdPublication = @IdPublication)
 			BEGIN
 				INSERT INTO @Result(ResultStatus, ResultMessage, OperationType, AffectedRecordId, OperationDateTime)
-				VALUES (0, 'Error: Publication not found', 'NONE', NULL, GETDATE())
+				VALUES (0, 'Error: Publication not found', 'UPDATE', NULL, GETDATE())
 
             ROLLBACK TRANSACTION;
             RETURN;
@@ -250,7 +250,7 @@ BEGIN
 			IF @@ROWCOUNT = 0
 			BEGIN
 				INSERT INTO @Result(ResultStatus, ResultMessage, OperationType, AffectedRecordId, OperationDateTime)
-				VALUES(0, 'Error: Publication not found', 'NONE', @IdPublication, GETDATE())
+				VALUES(0, 'Error: Publication not found', 'DELETE', @IdPublication, GETDATE())
 
             ROLLBACK TRANSACTION;
             RETURN;
@@ -272,7 +272,7 @@ BEGIN
 			SET @ErrorMessage = ERROR_MESSAGE()
 
 			INSERT INTO @Result(ResultStatus, ResultMessage, OperationType, AffectedRecordId, OperationDateTime)
-			VALUES(0, @ErrorMessage, 'NONE', @IdPublication, GETDATE())
+			VALUES(0, @ErrorMessage, 'DELETE', @IdPublication, GETDATE())
 		END CATCH
 
 	SET NOCOUNT OFF;

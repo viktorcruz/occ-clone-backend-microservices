@@ -53,7 +53,7 @@ BEGIN
 		IF EXISTS(SELECT 1 FROM [dbo].[Roles] WHERE RoleName = @RoleName)
 		BEGIN 
 			INSERT INTO @Result(ResultStatus, ResultMessage, OperationType, AffectedRecordId, OperationDateTime)
-			SELECT 0, 'Error: RoleName already exists', 'NONE', NULL, GETDATE()
+			SELECT 0, 'Error: RoleName already exists', 'INSERT', NULL, GETDATE()
 
 			ROLLBACK TRANSACTION 
 		END
@@ -78,7 +78,7 @@ BEGIN
 		END
 
 		INSERT INTO @Result(ResultStatus, ResultMessage, OperationType, AffectedRecordId, OperationDateTime)
-		VALUES(0, ERROR_MESSAGE(), 'ERROR', NULL, GETDATE())
+		VALUES(0, ERROR_MESSAGE(), 'INSERT', NULL, GETDATE())
 
 	END CATCH
 	
@@ -195,7 +195,7 @@ BEGIN
 		IF NOT EXISTS(SELECT 1 FROM [dbo].[Roles] WHERE IdRole = @IdRole)
 		BEGIN
 			INSERT INTO @Result(ResultStatus, ResultMessage, OperationType, AffectedRecordId, OperationDateTime)
-			SELECT 0, 'Error: Role not found', 'NONE', NULL, GETDATE()
+			SELECT 0, 'Error: Role not found', 'UPDATE', NULL, GETDATE()
 
 			ROLLBACK TRANSACTION TrnxUpCategories
 		END
@@ -219,7 +219,7 @@ BEGIN
 		END
 
 		INSERT INTO @Result(ResultStatus, ResultMessage, OperationType, AffectedRecordId, OperationDateTime)
-		VALUES(0, ERROR_MESSAGE(), 'ERROR', @IdRole, GETDATE())
+		VALUES(0, ERROR_MESSAGE(), 'UPDATE', @IdRole, GETDATE())
 
 	END CATCH
 	SET NOCOUNT OFF;
@@ -254,7 +254,7 @@ BEGIN
 		IF @@ROWCOUNT = 0
 		BEGIN
 			INSERT INTO @Result(ResultStatus, ResultMessage, OperationType, AffectedRecordId, OperationDateTime)
-			VALUES(0, 'Error: Role not found', 'NONE', @IdRole, GETDATE())
+			VALUES(0, 'Error: Role not found', 'DELETE', @IdRole, GETDATE())
 
 			ROLLBACK TRANSACTION TDEL
 		END
@@ -274,7 +274,7 @@ BEGIN
 		SET @ErrorMessage = ERROR_MESSAGE()
 
 		INSERT INTO @Result(ResultStatus, ResultMessage, OperationType, AffectedRecordId, OperationDateTime)
-		VALUES(0, @ErrorMessage, 'NONE', @IdRole, GETDATE())
+		VALUES(0, @ErrorMessage, 'DELETE', @IdRole, GETDATE())
 	END CATCH
 
 	SET NOCOUNT OFF;

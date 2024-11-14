@@ -76,7 +76,7 @@ BEGIN
 		IF EXISTS(SELECT 1 FROM [dbo].[Users] WHERE Email = @Email)
 		BEGIN 
 			INSERT INTO @Result(ResultStatus, ResultMessage, OperationType, AffectedRecordId, OperationDateTime)
-			SELECT 0, 'Error: User already exists', 'NONE', NULL, GETDATE()
+			SELECT 0, 'Error: User already exists', 'INSERT', NULL, GETDATE()
 
             ROLLBACK TRANSACTION;
             RETURN;
@@ -290,7 +290,7 @@ BEGIN
 			IF NOT EXISTS(SELECT 1 FROM Users WHERE IdUser = @IdUser AND Email = @Email)
 			BEGIN
 				INSERT INTO @Result(ResultStatus, ResultMessage, OperationType, AffectedRecordId, OperationDateTime)
-				VALUES(0, 'Error: User not found', 'NONE', NULL, GETDATE())
+				VALUES(0, 'Error: User not found', 'UPDATE', NULL, GETDATE())
 
 				ROLLBACK TRANSACTION TUP
 				RETURN;
@@ -400,7 +400,7 @@ BEGIN
 		IF NOT EXISTS(SELECT 1 FROM [dbo].[Users] WHERE IdUser = @IdUser)
 		BEGIN
 			INSERT INTO @Result(ResultStatus, ResultMessage, OperationType, AffectedRecordId, OperationDateTime)
-			SELECT 0, 'Error: user not found', 'NONE', NULL, GETDATE()
+			SELECT 0, 'Error: user not found', 'UPDATE', NULL, GETDATE()
 
             ROLLBACK TRANSACTION;
             RETURN;
@@ -464,7 +464,7 @@ BEGIN
 		IF NOT EXISTS(SELECT 1 FROM [dbo].[Users] WHERE IdUser = @IdUser)
 		BEGIN
 			INSERT INTO @Result(ResultStatus, ResultMessage, OperationType, AffectedRecordId, OperationDateTime)
-			SELECT 0, 'Error: user not found', 'NONE', NULL, GETDATE()
+			SELECT 0, 'Error: user not found', 'UPDATE', NULL, GETDATE()
 
             ROLLBACK TRANSACTION;
             RETURN;
@@ -523,7 +523,7 @@ BEGIN
 		IF NOT EXISTS(SELECT 1 FROM [dbo].[Users] WHERE Email = @Email)
 		BEGIN
 			INSERT INTO @Result(ResultStatus, ResultMessage, OperationType, AffectedRecordId, OperationDateTime)
-			SELECT 0, 'Error: user not found', 'NONE', NULL, GETDATE()
+			SELECT 0, 'Error: user not found', 'UPDATE', NULL, GETDATE()
 
             ROLLBACK TRANSACTION;
             RETURN;
@@ -558,6 +558,62 @@ BEGIN
 END
 GO
 
+/** CHANGE PASS **/
+CREATE OR ALTER PROCEDURE
+		Ups_UserPassword_Update
+			@IdUser INT, 
+			@Email NVARCHAR(50),
+			@PasswordHash NVARCHAR(100)
+AS 
+BEGIN
+	SET NOCOUNT ON;
+	DECLARE @ErrorMessage NVARCHAR(4000);
+	DECLARE @Result AS TABLE
+	(
+		ResultStatus BIT,
+		ResultMessage NVARCHAR(100),
+		OperationType NVARCHAR(20),
+		AffectedRecordId INT,
+		OperationDateTime DATETIME
+	);
+
+	BEGIN TRY
+		BEGIN TRANSACTION
+			IF NOT EXISTS(SELECT 1 FROM [dbo].[Users] WHERE IdUser = @IdUser AND Email = @Email)
+			BEGIN
+				INSERT INTO @Result(ResultStatus, ResultMessage, OperationType, AffectedRecordId, OperationDateTime)
+				VALUES (0, 'Error: User not found', 'UPDATE', NULL, GETDATE())
+				ROLLBACK TRANSACTION;
+				RETURN;
+			END
+			ELSE BEGIN
+				UPDATE Users
+					SET PasswordHash = @PasswordHash
+					WHERE IdUser = @IdUser AND Email = @Email
+
+				INSERT INTO @Result(ResultStatus, ResultMessage, OperationType, AffectedRecordId, OperationDateTime)
+				VALUES(1, 'User found', 'UPDATE', @IdUser, GETDATE())
+
+				COMMIT TRANSACTION
+			END
+	END TRY
+	BEGIN CATCH
+		IF @@TRANCOUNT > 0
+		BEGIN
+			ROLLBACK TRANSACTION;
+		END
+		SET @ErrorMessage = ERROR_MESSAGE()
+		INSERT INTO @Result(ResultStatus, ResultMessage, OperationType, AffectedRecordId, OperationDateTime)
+		VALUES(0, @ErrorMessage, 'UPDATE', @IdUser, GETDATE())
+	END CATCH
+
+	SET NOCOUNT OFF;
+	SELECT * FROM @Result
+END
+GO
+
+
+
 /** ACTIVE **/
 CREATE OR ALTER 
 	PROCEDURE
@@ -583,7 +639,7 @@ BEGIN
 		IF NOT EXISTS(SELECT 1 FROM [dbo].[Users] WHERE IdUser = @IdUser)
 		BEGIN
 			INSERT INTO @Result(ResultStatus, ResultMessage, OperationType, AffectedRecordId, OperationDateTime)
-			VALUES (0, 'Error: User not found', 'NONE', NULL, GETDATE())
+			VALUES (0, 'Error: User not found', 'UPDATE', NULL, GETDATE())
 
             ROLLBACK TRANSACTION;
             RETURN;
@@ -640,7 +696,7 @@ BEGIN
 		IF @@ROWCOUNT = 0
 		BEGIN
 			INSERT INTO @Result(ResultStatus, ResultMessage, OperationType, AffectedRecordId, OperationDateTime)
-			VALUES(0, 'Error: User not found', 'NONE', @IdUser, GETDATE())
+			VALUES(0, 'Error: User not found', 'DELETE', @IdUser, GETDATE())
 
             ROLLBACK TRANSACTION;
             RETURN;
@@ -661,7 +717,7 @@ BEGIN
 		SET @ErrorMessage = ERROR_MESSAGE()
 
 		INSERT INTO @Result(ResultStatus, ResultMessage, OperationType, AffectedRecordId, OperationDateTime)
-		VALUES(0, @ErrorMessage, 'NONE', @IdUser, GETDATE())
+		VALUES(0, @ErrorMessage, 'DELETE', @IdUser, GETDATE())
 	END CATCH
 
 	SET NOCOUNT OFF;

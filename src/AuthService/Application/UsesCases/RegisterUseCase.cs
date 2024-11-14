@@ -21,16 +21,16 @@ namespace AuthService.Application.UsesCases
         {
             try
             {
-            var response = await _registerPort.RegisterAsync(command);
+                var response = await _registerPort.RegisterAsync(command);
 
-            if (response == null || string.IsNullOrEmpty(response.Email))
-            {
-                throw new("The email has already been registered");
-            }
+                if (response == null || string.IsNullOrEmpty(response.Email))
+                {
+                    throw new("The email has already been registered");
+                }
 
-            return response;
+                return response;
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 _applicationExceptionHandler.CaptureException<string>(ex, ApplicationLayer.Application, ActionType.Register);
                 throw;

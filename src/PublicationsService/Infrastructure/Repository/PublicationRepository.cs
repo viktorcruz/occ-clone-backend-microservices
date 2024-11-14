@@ -260,13 +260,6 @@ namespace PublicationsService.Infrastructure.Repository
                             ExceptionMessage = ex.Message
                         });
                     }
-                    finally
-                    {
-                        if (connection.State == System.Data.ConnectionState.Open)
-                        {
-                            connection.Close();
-                        }
-                    }
                 }
             }
         }
@@ -301,13 +294,6 @@ namespace PublicationsService.Infrastructure.Repository
                         transaction.Rollback();
                         _applicationExceptionHandler.CaptureException<string>(ex, ApplicationLayer.Repository, ActionType.Delete);
                         return new DatabaseResult { ResultStatus = false };
-                    }
-                    finally
-                    {
-                        if (connection.State == System.Data.ConnectionState.Open)
-                        {
-                            connection.Close();
-                        }
                     }
                 }
             }
