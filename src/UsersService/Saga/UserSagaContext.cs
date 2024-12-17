@@ -1,15 +1,8 @@
-﻿namespace UsersService.Saga
-{
-    public enum SagaState
-    {
-        NotStarted,
-        UserCreated,
-        PublicationCreated,
-        JobSearchUpdated,
-        SagaComplete
-    }
+﻿using UsersService.Saga.Interfaces;
 
-    public class UserSagaContext
+namespace UsersService.Saga
+{
+    public class UserSagaContext : IUserSagaContext
     {
         public Guid IdSaga { get; private set; }
         public Dictionary<string, bool> Steps { get; private set; }

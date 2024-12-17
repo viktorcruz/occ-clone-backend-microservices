@@ -1,11 +1,11 @@
 ﻿using Dapper;
 using PublicationsService.Aplication.Commands;
-using PublicationsService.Aplication.Dto;
-using PublicationsService.Application.Dto;
+using PublicationsService.Aplication.DTO;
+using PublicationsService.Application.DTO;
 using PublicationsService.Infrastructure.Interface;
-using SharedKernel.Common.Interfaces;
+using SharedKernel.Common.Interfaces.Persistence;
 using SharedKernel.Common.Responses;
-using SharedKernel.Interface;
+using SharedKernel.Interfaces.Exceptions;
 
 namespace PublicationsService.Infrastructure.Repository
 {

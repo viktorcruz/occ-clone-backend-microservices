@@ -1,11 +1,11 @@
-﻿using SharedKernel.Interface;
+﻿using SharedKernel.Interfaces.Audit;
 using System.Text.Json;
 
 namespace SharedKernel.Helpers
 {
     public static class SerializerEvent
     {
-        public static string SerializeOrdered(IEntityOperationEvent @event)
+        public static string SerializeOrdered(IAuditEvent @event)
         {
             var orderedEvent = new
             {

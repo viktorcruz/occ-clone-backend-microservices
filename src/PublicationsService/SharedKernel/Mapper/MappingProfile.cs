@@ -1,5 +1,5 @@
 ﻿using AutoMapper;
-using PublicationsService.Aplication.Dto;
+using PublicationsService.Aplication.DTO;
 using PublicationsService.Domain.Entity;
 
 namespace PublicationsService.SharedKernel.Mapper

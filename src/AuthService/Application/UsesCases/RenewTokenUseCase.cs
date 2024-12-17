@@ -5,7 +5,7 @@ using AuthService.Domain.Entities;
 using AuthService.Domain.Ports.Output;
 using AuthService.Domain.Ports.Output.Services;
 using Microsoft.IdentityModel.Tokens;
-using SharedKernel.Interface;
+using SharedKernel.Interfaces.Exceptions;
 using System.Security.Claims;
 
 namespace AuthService.Application.UsesCases

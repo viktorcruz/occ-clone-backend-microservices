@@ -1,7 +1,7 @@
 ﻿using MediatR;
-using PublicationsService.Aplication.Dto;
+using PublicationsService.Aplication.DTO;
 using SharedKernel.Common.Responses;
-using SharedKernel.Interface;
+using SharedKernel.Interfaces.Response;
 
 namespace PublicationsService.Aplication.Queries
 {

@@ -2,11 +2,15 @@
 using AuthService.Application.DTO;
 using AuthService.Domain.Ports.Output;
 using AuthService.Domain.Ports.Output.Services;
+using AuthService.Infrastructure.Extensions;
 using AuthService.Infrastructure.Security;
-using SharedKernel.Common.Events;
-using SharedKernel.Common.Extensions;
-using SharedKernel.Common.Interfaces;
-using SharedKernel.Interface;
+using SharedKernel.Common.Interfaces.Logging;
+using SharedKernel.Events.Auth;
+using SharedKernel.Extensions.Event;
+using SharedKernel.Extensions.Http;
+using SharedKernel.Extensions.Routing;
+using SharedKernel.Interfaces.Exceptions;
+using SharedKernel.Interfaces.Service;
 
 namespace AuthService.Infrastructure.Adapters
 {
@@ -18,6 +22,8 @@ namespace AuthService.Infrastructure.Adapters
         private readonly ITokenService _tokenService;
         private readonly IEventPublisherService _eventPublisherService;
         private readonly IApplicationExceptionHandler _applicationExceptionHandler;
+        private readonly IHttpContextAccessor _contextAccessor;
+        private readonly ICorrelationService _correlationService;
         #endregion
 
         #region Constructor
@@ -26,7 +32,9 @@ namespace AuthService.Infrastructure.Adapters
             IRolePort roleRepository,
             ITokenService tokenService,
             IEventPublisherService eventPublisherService,
-            IApplicationExceptionHandler applicationExceptionHandler
+            IApplicationExceptionHandler applicationExceptionHandler,
+            IHttpContextAccessor contextAccessor,
+            ICorrelationService correlationService
             )
         {
             _userRepository = userRepository;
@@ -34,6 +42,8 @@ namespace AuthService.Infrastructure.Adapters
             _tokenService = tokenService;
             _eventPublisherService = eventPublisherService;
             _applicationExceptionHandler = applicationExceptionHandler;
+            _contextAccessor = contextAccessor;
+            _correlationService = correlationService;
         }
         #endregion
 
@@ -79,38 +89,43 @@ namespace AuthService.Infrastructure.Adapters
                 {
                     IdUser = user.Details.IdUser,
                     IdRole = user.Details.IdRole,
+                    Role = RoleTypeExtension.GetRoleTypeName(user.Details.IdRole),
                     Email = user.Details.Email,
                 };
 
                 await _eventPublisherService.PublishEventAsync(
-                    entityName: "Auhorize",
-                    operationType: "Login",
+                    entityName: AuditEntityType.Authorize.ToEntityName(),
+                    operationType: AuditOperationType.Login.ToOperationType(),
                     success: true,
-                    performedBy: "Admin",
+                    performedBy: _contextAccessor.GtePerformedBy(),
+                    reason: "User is logged in",
                     additionalData: userDetails,
                     exchangeName: PublicationExchangeNames.Authorize.ToExchangeName(),
                     routingKey: PublicationRoutingKeys.Login_Success.ToRoutingKey()
                     );
-                
+
                 var token = _tokenService.GenerateAccessToken(userDetails);
 
                 userDetails.Token = token;
-                
+
                 return userDetails;
             }
             catch (Exception ex)
             {
-                _applicationExceptionHandler.CaptureException<string>(ex, ApplicationLayer.Adapter, ActionType.Login);
                 var registerErrorEvent = new RegisterErrorEvent
                 {
+                    IdCorrelation = _correlationService.GetCorrelationId(),
                     ErrorMessage = ex.Message,
-                    StackTrace = ex.StackTrace
+                    StackTrace = ex.StackTrace ?? "UnknownLogger"
                 };
+
+                _applicationExceptionHandler.CaptureException<string>(ex, ApplicationLayer.Adapter, ActionType.Login);
+
                 await _eventPublisherService.PublishEventAsync(
-                    entityName: "Authorize",
-                    operationType: "Login",
+                    entityName: AuditEntityType.Authorize.ToEntityName(),
+                    operationType: AuditOperationType.Login.ToOperationType(),
                     success: false,
-                    performedBy: "Admin",
+                    performedBy: _contextAccessor.GtePerformedBy(),
                     reason: ex.Message,
                     additionalData: registerErrorEvent,
                     exchangeName: PublicationExchangeNames.Authorize.ToExchangeName(),

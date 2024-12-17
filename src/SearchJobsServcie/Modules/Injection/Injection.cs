@@ -1,68 +1,31 @@
 ﻿using SearchJobsService.Domain.Core;
-using SearchJobsService.Domain.Events;
 using SearchJobsService.Domain.Interface;
 using SearchJobsService.Infrastructure.Interface;
 using SearchJobsService.Infrastructure.Repository;
-using SearchJobsService.Application.EventListeners;
-using SharedKernel.Common;
-using SharedKernel.Common.Events;
-using SharedKernel.Common.Exceptions;
-using SharedKernel.Common.Interfaces;
 using SharedKernel.Common.Messaging;
 using SharedKernel.Common.Repositories;
 using SharedKernel.Common.Response;
 using SharedKernel.Common.Responses;
 using SharedKernel.Data;
-using SharedKernel.Interface;
-using SearchJobsService.Domain.Services;
+using SharedKernel.Audit;
+using SharedKernel.Common.Interfaces.EventBus;
+using SharedKernel.Common.Interfaces.Logging;
+using SharedKernel.Common.Interfaces.Persistence;
+using SearchJobsService.Application.EventListeners.User;
+using SharedKernel.Services;
+using SharedKernel.Dapper;
+using SharedKernel.Events.User;
+using SharedKernel.Exceptions.Application;
+using SharedKernel.Interfaces.Exceptions;
+using SharedKernel.Interfaces.Response;
+using SharedKernel.Interfaces.Service;
+using SharedKernel.Interfaces.Audit;
+using SharedKernel.Interfaces.Dapper;
 
 namespace SearchJobsService.Modules.Injection
 {
     public static class Injection
     {
-        //public static IServiceCollection AddCustomInjections(this IServiceCollection services, IConfiguration configuration)
-        //{
-        //    services.AddSingleton<RabbitMQConnection>();
-        //    services.AddSingleton<RabbitMQEventBus>();
-        //    services.AddTransient<IEventBus, RabbitMQEventBus>();
-
-
-        //    services.AddTransient<EntityOperationEvent>();
-        //    services.AddTransient<IEntityOperationEventFactory, EntityOperationEventFactory>();
-        //services.AddSingleton<IDapperExecutor, DapperExecutor>();
-        //    services.AddTransient<IEventLogRepository, EventLogRepository>();
-        //    services.AddTransient<ISearchJobsDomain, SearchJobsDomain>();
-        //    services.AddTransient<ISearchJobsRepository, SearchJobsRepository>();
-        //    services.AddSingleton<IGlobalExceptionHandler, GlobalExceptionHandler>();
-        //    services.AddTransient(typeof(IEndpointResponse<>), typeof(EndpointResponse<>));
-        //    services.AddTransient<IDatabaseResult, DatabaseResult>();
-        //    services.AddSingleton<ISqlServerConnectionFactory, SqlServerConnectionFactory>();
-
-        //    services.AddLogging();
-
-
-        //    // Registra los handlers de eventos
-        //    services.AddScoped<IEventHandler<UserCreatedEvent>, UserCreatedEventHandler>();
-        //    services.AddScoped<IEventHandler<UserCreationSucceededEvent>, UserCreationSucceededEventHandler>();
-
-        //    // Suscribe a los eventos en RabbitMQ
-        //    var serviceProvider = services.BuildServiceProvider();
-        //    var eventBus = serviceProvider.GetRequiredService<IEventBus>();
-
-
-        //    // Crear y configurar el EventRouter para este microservicio
-        //    var eventRouter = new EventRouter(serviceProvider, eventBus);
-
-        //    // Registrar solo los eventos que necesita SearchJobsService
-        //    // Registrar eventos en el EventRouter
-        //    eventRouter.RegisterEventHandler<UserCreatedEvent>("user_exchange", "user.created");
-        //    eventRouter.RegisterEventHandler<UserUpdatedEvent>("user_exchange", "user.updated");
-        //    eventRouter.RegisterEventHandler<PublicationCreatedEvent>("publication_exchange", "publication.created");
-
-
-        //    return services;
-        //}
-
         public static IServiceCollection AddCustomInjection(this IServiceCollection services, IConfiguration configuration)
         {
             services.AddRabbitMQ(configuration);
@@ -70,14 +33,16 @@ namespace SearchJobsService.Modules.Injection
             services.AddDomainServices();
             services.AddEventHandler();
             services.AddCommonServices(configuration);
+            //services.AddSingleton<IEventPublisherService, SagaOrchestrator>();
 
             return services;
         }
 
         private static IServiceCollection AddRabbitMQ(this IServiceCollection services, IConfiguration configuration)
         {
+            services.AddSingleton<RabbitMQSettings>();
             services.AddSingleton<RabbitMQConnection>();
-            services.AddSingleton<IEventBus, RabbitMQEventBus>();
+            services.AddSingleton<IAsyncEventBus, RabbitMQEventBus>();
             services.AddSingleton<EventRouter>();
 
             return services;
@@ -86,14 +51,14 @@ namespace SearchJobsService.Modules.Injection
         private static IServiceCollection AddDomainServices(this IServiceCollection services)
         {
             services.AddTransient<ISearchJobsDomain, SearchJobsDomain>();
-            services.AddTransient<IEntityOperationEventFactory, EntityOperationEventFactory>();
+            services.AddTransient<IAuditEventFactory, AuditEventFactory>();
 
             return services;
         }
 
         private static IServiceCollection AddRepositories(this IServiceCollection services)
         {
-            services.AddTransient<IEventLogRepository, EventLogRepository>();
+            services.AddTransient<IEventLogStorage, EventLogStorage>();
             services.AddTransient<ISearchJobsRepository, SearchJobsRepository>();
 
             return services;
@@ -110,6 +75,7 @@ namespace SearchJobsService.Modules.Injection
 
         private static IServiceCollection AddCommonServices(this IServiceCollection services, IConfiguration configuration)
         {
+            services.AddSingleton<ICorrelationService, CorrelationService>();
             services.AddSingleton<IApplicationExceptionHandler, ApplicationExceptionHandler>();
             services.AddTransient(typeof(IEndpointResponse<>), typeof(EndpointResponse<>));
             services.AddTransient<IDatabaseResult, DatabaseResult>();
@@ -117,6 +83,7 @@ namespace SearchJobsService.Modules.Injection
             services.AddSingleton<IDapperExecutor, DapperExecutor>();
             services.AddSingleton<ISqlServerConnectionFactory, SqlServerConnectionFactory>();
             services.AddLogging();
+            services.AddHttpContextAccessor();
 
             return services;
         }

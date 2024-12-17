@@ -1,5 +1,5 @@
 ﻿using SharedKernel.Common.Responses;
-using UsersService.Application.Dto;
+using UsersService.Application.DTO;
 using UsersService.Domain.Entity;
 using UsersService.Domain.Interface;
 using UsersService.Infrastructure.Interface;

@@ -1,6 +1,6 @@
 ﻿using MediatR;
-using SharedKernel.Interface;
-using UsersService.Application.Dto;
+using SharedKernel.Interfaces.Response;
+using UsersService.Application.DTO;
 
 namespace UsersService.Application.Commands
 {

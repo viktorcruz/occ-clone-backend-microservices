@@ -1,9 +1,9 @@
 ﻿using AuthService.Domain.Entities;
 using AuthService.Domain.Ports.Output;
 using Dapper;
-using SharedKernel.Common.Interfaces;
+using SharedKernel.Common.Interfaces.Persistence;
 using SharedKernel.Common.Responses;
-using SharedKernel.Interface;
+using SharedKernel.Interfaces.Exceptions    ;
 
 namespace AuthService.Infrastructure.Repository
 {

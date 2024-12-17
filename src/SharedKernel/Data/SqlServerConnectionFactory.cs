@@ -1,5 +1,5 @@
 ﻿using Microsoft.Extensions.Configuration;
-using SharedKernel.Common.Interfaces;
+using SharedKernel.Common.Interfaces.Persistence;
 using System.Data;
 using System.Data.SqlClient;
 

@@ -1,4 +1,4 @@
-﻿namespace UsersService.Application.Dto
+﻿namespace UsersService.Application.DTO
 {
     public class SearchUsersDTO
     {

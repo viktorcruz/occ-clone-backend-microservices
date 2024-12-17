@@ -1,5 +1,5 @@
-﻿using SharedKernel.Common.Events;
-using SharedKernel.Common.Interfaces;
+﻿using SharedKernel.Common.Interfaces.EventBus;
+using SharedKernel.Events.User;
 
 namespace UsersService.Application.EventListeners
 {
@@ -7,7 +7,7 @@ namespace UsersService.Application.EventListeners
     {
         public Task Handle(UserUpdatedEvent @event)
         {
-            Console.WriteLine($"User updated: {@event.UserId}, email: {@event.Email}");
+            Console.WriteLine($"User updated: {@event.IdUser}, email: {@event.Email}");
             // Lógica adicional para el evento
             return Task.CompletedTask;
         }

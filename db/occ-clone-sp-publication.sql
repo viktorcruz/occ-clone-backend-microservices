@@ -16,11 +16,11 @@ ALTER PROCEDURE [dbo].[Usp_Publications_Add]
 AS
 BEGIN
     SET NOCOUNT ON;
-
+	DECLARE @ErrorMessage NVARCHAR(4000)
     DECLARE @Result AS TABLE
     (
         ResultStatus BIT,
-        ResultMessage NVARCHAR(100),
+        ResultMessage NVARCHAR(1000),
         OperationType NVARCHAR(20),
         AffectedRecordId INT, 
         OperationDateTime DATETIME
@@ -45,9 +45,9 @@ BEGIN
 		BEGIN
 			ROLLBACK TRANSACTION;
 		END
-        
+        SET @ErrorMessage = ERROR_MESSAGE()
         INSERT INTO @Result(ResultStatus, ResultMessage, OperationType, AffectedRecordId, OperationDateTime)
-        VALUES(0, ERROR_MESSAGE(), 'INSERT', NULL, GETDATE());
+        VALUES(0, @ErrorMessage, 'INSERT', NULL, GETDATE());
         
     END CATCH
 

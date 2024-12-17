@@ -1,9 +1,9 @@
 ﻿using Dapper;
-using SharedKernel.Common.Interfaces;
+using SharedKernel.Common.Interfaces.Persistence;
 using SharedKernel.Common.Responses;
-using SharedKernel.Interface;
+using SharedKernel.Interfaces.Exceptions;
 using System.Data;
-using UsersService.Application.Dto;
+using UsersService.Application.DTO;
 using UsersService.Domain.Entity;
 using UsersService.Infrastructure.Interface;
 

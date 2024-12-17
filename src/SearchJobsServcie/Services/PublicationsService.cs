@@ -1,6 +1,6 @@
 ﻿using SearchJobsService.Services.Interfaces;
-using SharedKernel.Common.Events;
-using SharedKernel.Common.Interfaces;
+using SharedKernel.Common.Interfaces.EventBus;
+using SharedKernel.Events.Publication;
 
 namespace SearchJobsService.Services
 {

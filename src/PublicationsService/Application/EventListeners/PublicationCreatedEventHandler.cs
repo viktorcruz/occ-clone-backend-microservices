@@ -1,8 +1,8 @@
 ﻿using PublicationsService.Aplication.Commands;
-using PublicationsService.Aplication.Dto;
+using PublicationsService.Aplication.DTO;
 using PublicationsService.Infrastructure.Interface;
-using SharedKernel.Common.Events;
-using SharedKernel.Common.Interfaces;
+using SharedKernel.Common.Interfaces.EventBus;
+using SharedKernel.Events.Publication;
 
 namespace PublicationsService.Application.EventListeners
 {

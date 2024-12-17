@@ -1,10 +1,13 @@
 ﻿using Dapper;
 using SearchJobsService.Application.Commands;
-using SearchJobsService.Application.Dto;
+using SearchJobsService.Application.DTO;
+using SearchJobsService.Application.DTO.Commands;
+using SearchJobsService.Application.DTO.Queries;
 using SearchJobsService.Infrastructure.Interface;
-using SharedKernel.Common.Interfaces;
+using SharedKernel.Common.Interfaces.Persistence;
 using SharedKernel.Common.Responses;
-using SharedKernel.Interface;
+using SharedKernel.Interfaces.Exceptions;
+using System.Data.SqlClient;
 
 namespace SearchJobsService.Infrastructure.Repository
 {
@@ -43,7 +46,8 @@ namespace SearchJobsService.Infrastructure.Repository
                         parameters.Add("@ApplicantResume", command.ApplicantResume);
                         parameters.Add("@CoverLetter", command.CoverLetter);
                         parameters.Add("@ApplicationDate", command.ApplicationDate);
-                        parameters.Add("@Status", command.GetRecruitmentStatus(Domain.Enum.RecruitmentStatus.Applied));
+                        parameters.Add("@Status", command.Status);
+                        parameters.Add("@StatusMessage", command.StatusMessage);
 
                         var results = await connection.QuerySingleAsync<DatabaseResult>(query, param: parameters, transaction: transaction, commandType: System.Data.CommandType.StoredProcedure);
 
@@ -68,13 +72,7 @@ namespace SearchJobsService.Infrastructure.Repository
                             ExceptionMessage = ex.Message,
                         };
                     }
-                    finally
-                    {
-                        if (connection.State == System.Data.ConnectionState.Open)
-                        {
-                            connection.Close();
-                        }
-                    }
+
                     return new DatabaseResult
                     {
                         ResultStatus = false,
@@ -108,11 +106,7 @@ namespace SearchJobsService.Infrastructure.Repository
 
                         transaction.Commit();
 
-                        //if (result.ResultStatus)
-                        //{
                         return result;
-                        //}
-                        //return null;
                     }
                     catch (Exception ex)
                     {
@@ -120,13 +114,6 @@ namespace SearchJobsService.Infrastructure.Repository
                         _applicationExceptionHandler.CaptureException<string>(ex, ApplicationLayer.Repository, ActionType.Withdraw);
                         return new DatabaseResult { ResultStatus = false };
                     }
-                    //finally
-                    //{
-                    //    if (connection.State == System.Data.ConnectionState.Open)
-                    //    {
-                    //        connection.Close();
-                    //    }
-                    //}
                 }
             }
         }
@@ -145,32 +132,22 @@ namespace SearchJobsService.Infrastructure.Repository
 
                     var results = await connection.QueryAsync<JobSearchResultDTO>(query, parameters);
                     var result = results.ToList();
-                    if (result.Any())
+                    
+                    if (!result.Any())
                     {
-                        return new RetrieveDatabaseResult<List<JobSearchResultDTO>>
-                        {
-                            Details = results.ToList(),
-                            ResultStatus = true,
-                            ResultMessage = "Jobs retrieved successfully",
-                            OperationType = "SEARCH",
-                            AffectedRecordId = 0,
-                            OperationDateTime = DateTime.Now,
-                            ExceptionMessage = "No exceptions found"
-                        };
+                        throw new Exception("No jobs found");
                     }
-                    else
+                    
+                    return new RetrieveDatabaseResult<List<JobSearchResultDTO>>
                     {
-                        return new RetrieveDatabaseResult<List<JobSearchResultDTO>>
-                        {
-                            Details = null,
-                            ResultStatus = false,
-                            ResultMessage = "No jobs found",
-                            OperationType = "SEARCH",
-                            AffectedRecordId = 0,
-                            OperationDateTime = DateTime.Now,
-                            ExceptionMessage = null
-                        };
-                    }
+                        Details = results.ToList(),
+                        ResultStatus = true,
+                        ResultMessage = "Jobs retrieved successfully",
+                        OperationType = "SEARCH",
+                        AffectedRecordId = 0,
+                        OperationDateTime = DateTime.Now,
+                        ExceptionMessage = "No exceptions found"
+                    };
                 }
             }
             catch (Exception ex)
@@ -202,39 +179,27 @@ namespace SearchJobsService.Infrastructure.Repository
                     parameters.Add("@IdApplicant", userId);
                     var results = await connection.QueryAsync<UserApplicationsResponseDTO>(query, parameters, commandType: System.Data.CommandType.StoredProcedure);
                     var result = results.ToList();
-                    foreach (var item in result)
+
+                    if (!result.Any())
                     {
-                        if (item.IdPublication == 0)
-                        {
-                            return null;
-                        }
+                        throw new Exception("No applications found for the given user.");
                     }
-                    if (results.Any())
+
+                    if (result.Any(item => item.IdPublication == 0))
                     {
-                        return new RetrieveDatabaseResult<List<UserApplicationsResponseDTO>>
-                        {
-                            Details = result,
-                            ResultStatus = true,
-                            ResultMessage = "Applicatoins retireved successfully",
-                            OperationType = "GET ALL",
-                            OperationDateTime = DateTime.Now,
-                            AffectedRecordId = 0,
-                            ExceptionMessage = "No exceptions found",
-                        };
+                        throw new Exception("One or more applications have invalid publication IDs.");
                     }
-                    else
+
+                    return new RetrieveDatabaseResult<List<UserApplicationsResponseDTO>>
                     {
-                        return new RetrieveDatabaseResult<List<UserApplicationsResponseDTO>>
-                        {
-                            Details = null,
-                            ResultStatus = false,
-                            ResultMessage = "No applications found",
-                            OperationType = "GET ALL",
-                            OperationDateTime = DateTime.Now,
-                            AffectedRecordId = 0,
-                            ExceptionMessage = null,
-                        };
-                    }
+                        Details = result,
+                        ResultStatus = true,
+                        ResultMessage = "Applications retrieved successfully",
+                        OperationType = "GET ALL",
+                        OperationDateTime = DateTime.Now,
+                        AffectedRecordId = 0,
+                        ExceptionMessage = "No exceptions found",
+                    };
                 }
             }
             catch (Exception ex)
@@ -249,6 +214,53 @@ namespace SearchJobsService.Infrastructure.Repository
                     OperationDateTime = DateTime.Now,
                     AffectedRecordId = 0,
                     ExceptionMessage = ex.Message
+                };
+            }
+        }
+
+        public async Task<DatabaseResult> HasApplicationAsync(int userId, int applicationId)
+        {
+            try
+            {
+                using (var connection = _sqlServerConnection.GetConnection(OCC_Connection))
+                {
+                    connection.Open();
+
+                    var query = "Usp_HasApplication_Get";
+                    var parameters = new DynamicParameters();
+                    parameters.Add("@IdApplicant", userId);
+                    parameters.Add("@IdPublication", applicationId);
+
+                    var result = await connection.QuerySingleOrDefaultAsync<DatabaseResult>(query, parameters, commandType: System.Data.CommandType.StoredProcedure);
+
+                    if (result == null)
+                    {
+                        return new DatabaseResult
+                        {
+                            ResultStatus = false,
+                            ResultMessage = "No application found for the given user and application ID."
+                        };
+                    }
+
+                    return result;
+                }
+            }
+            catch (SqlException sqlEx)
+            {
+                _applicationExceptionHandler.CaptureException<string>(sqlEx, ApplicationLayer.Repository, ActionType.FetchAll);
+                return new DatabaseResult
+                {
+                    ResultStatus = false,
+                    ResultMessage = $"Database error: {sqlEx.Message}"
+                };
+            }
+            catch (Exception ex)
+            {
+                _applicationExceptionHandler.CaptureException<string>(ex, ApplicationLayer.Repository, ActionType.FetchAll);
+                return new DatabaseResult
+                {
+                    ResultStatus = false,
+                    ResultMessage = $"Unexpected error: {ex.Message}"
                 };
             }
         }

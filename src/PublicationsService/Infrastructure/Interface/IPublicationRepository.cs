@@ -1,6 +1,6 @@
 ﻿using PublicationsService.Aplication.Commands;
-using PublicationsService.Aplication.Dto;
-using PublicationsService.Application.Dto;
+using PublicationsService.Aplication.DTO;
+using PublicationsService.Application.DTO;
 using SharedKernel.Common.Responses;
 
 namespace PublicationsService.Infrastructure.Interface

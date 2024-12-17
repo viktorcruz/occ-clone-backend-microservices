@@ -1,9 +1,12 @@
 ﻿using MediatR;
 using PublicationsService.Domain.Interface;
-using SharedKernel.Common.Events;
-using SharedKernel.Common.Extensions;
-using SharedKernel.Common.Interfaces;
-using SharedKernel.Interface;
+using SharedKernel.Common.Interfaces.Logging;
+using SharedKernel.Events.Auth;
+using SharedKernel.Extensions.Event;
+using SharedKernel.Extensions.Http;
+using SharedKernel.Extensions.Routing;
+using SharedKernel.Interfaces.Exceptions;
+using SharedKernel.Interfaces.Response;
 
 namespace PublicationsService.Aplication.Commands.Handlers
 {
@@ -14,6 +17,7 @@ namespace PublicationsService.Aplication.Commands.Handlers
         private readonly IEventPublisherService _eventPublisherService;
         private readonly IApplicationExceptionHandler _applicationExceptionHandler;
         private readonly IEndpointResponse<IDatabaseResult> _endpointResponse;
+        private readonly IHttpContextAccessor _contextAccessor;
         #endregion
 
         #region Constructor
@@ -21,13 +25,15 @@ namespace PublicationsService.Aplication.Commands.Handlers
             IPublicationDomain publicationDomain,
             IEventPublisherService eventPublisherService,
             IApplicationExceptionHandler applicationExceptionHandler,
-            IEndpointResponse<IDatabaseResult> endpointResponse
+            IEndpointResponse<IDatabaseResult> endpointResponse,
+            IHttpContextAccessor contextAccessor
             )
         {
             _publicationDomain = publicationDomain;
             _eventPublisherService = eventPublisherService;
             _applicationExceptionHandler = applicationExceptionHandler;
             _endpointResponse = endpointResponse;
+            _contextAccessor = contextAccessor;
         }
         #endregion
 
@@ -51,30 +57,14 @@ namespace PublicationsService.Aplication.Commands.Handlers
                     };
 
                     await _eventPublisherService.PublishEventAsync(
-                        entityName: "Publication",
-                        operationType: "DELETE",
+                        entityName: AuditEntityType.Publication.ToEntityName(),
+                        operationType: AuditOperationType.Delete.ToOperationType(),
                         success: true,
-                        performedBy: "Admin",
+                        performedBy: _contextAccessor.GtePerformedBy(),
                         reason: response.ResultMessage,
                         additionalData: additionalData,
                         exchangeName: PublicationExchangeNames.Publication.ToExchangeName(),
-                        routingKey: PublicationRoutingKeys.Delete_Success.ToRoutingKey()
-                        );
-                }
-                else
-                {
-                    _endpointResponse.IsSuccess = false;
-                    _endpointResponse.Message = response?.ResultMessage ?? "Publication not found";
-
-                    await _eventPublisherService.PublishEventAsync(
-                        entityName: "Publication",
-                        operationType: "DELETE",
-                        success: false,
-                        performedBy: "Admin",
-                        reason: response?.ResultMessage ?? "Publication not found",
-                        additionalData: null,
-                        exchangeName: PublicationExchangeNames.Publication.ToExchangeName(),
-                        routingKey: PublicationRoutingKeys.Delete_Failed.ToRoutingKey()
+                        routingKey: PublicationRoutingKeys.Deleted.ToRoutingKey()
                         );
                 }
             }
@@ -89,10 +79,10 @@ namespace PublicationsService.Aplication.Commands.Handlers
                     StackTrace = ex.StackTrace
                 };
                 await _eventPublisherService.PublishEventAsync(
-                        entityName: "Publication",
-                        operationType: "DELETE",
+                        entityName: AuditEntityType.Publication.ToEntityName(),
+                        operationType: AuditOperationType.Delete.ToOperationType(),
                         success: false,
-                        performedBy: "Admin",
+                        performedBy: _contextAccessor.GtePerformedBy(),
                         reason: ex.Message,
                         additionalData: registerErrorEvent,
                         exchangeName: PublicationExchangeNames.Publication.ToExchangeName(),

@@ -1,7 +1,8 @@
 ﻿using Dapper;
 using Moq;
-using SharedKernel.Common.Interfaces;
-using SharedKernel.Interface;
+using SharedKernel.Common.Interfaces.Persistence;
+using SharedKernel.Interfaces.Dapper;
+using SharedKernel.Interfaces.Exceptions;
 using System.Data;
 using UsersService.Infrastructure.Repository;
 
@@ -35,7 +36,7 @@ namespace UsersService.UnitTest.Repositories
                 mockDbTransaction.Object,
                 CommandType.StoredProcedure)).ReturnsAsync(1);
 
-            var eventLogRepository = new EventLogRepository(
+            var eventLogRepository = new EventLogStore(
                 mockDbConnectionFactory.Object, 
                 mockGlobalExceptionHandler.Object,
                 mockDapperExecutor.Object);

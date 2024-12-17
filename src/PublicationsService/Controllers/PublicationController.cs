@@ -2,10 +2,11 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PublicationsService.Aplication.Commands;
-using PublicationsService.Aplication.Dto;
+using PublicationsService.Aplication.DTO;
 using PublicationsService.Aplication.Queries;
-using PublicationsService.Application.Dto;
-using SharedKernel.Interface;
+using PublicationsService.Application.DTO;
+using PublicationsService.Saga;
+using SharedKernel.Interfaces.Exceptions;
 
 namespace PublicationsService.Controllers
 {
@@ -16,12 +17,14 @@ namespace PublicationsService.Controllers
     {
         #region Properties
         private readonly IMediator _mediator;
+        private readonly SagaOrchestrator _sagaOrchestrator;
         private readonly IApplicationExceptionHandler _applicationExceptionHandler;
         #endregion
 
         #region Constructor
-        public PublicationController(IMediator mediator, IApplicationExceptionHandler applicationExceptionHandler)
+        public PublicationController(SagaOrchestrator sagaOrchestrator, IMediator mediator, IApplicationExceptionHandler applicationExceptionHandler)
         {
+            _sagaOrchestrator = sagaOrchestrator;
             _mediator = mediator;
             _applicationExceptionHandler = applicationExceptionHandler;
         }
@@ -33,22 +36,26 @@ namespace PublicationsService.Controllers
         {
             try
             {
-                if (publicationDTO.IdUser == 0 || publicationDTO.IdRole == 0 || string.IsNullOrEmpty(publicationDTO.Title) || string.IsNullOrEmpty(publicationDTO.Description))
-                {
-                    return BadRequest();
-                }
+                //if (publicationDTO.IdUser == 0 || publicationDTO.IdRole == 0 || string.IsNullOrEmpty(publicationDTO.Title) || string.IsNullOrEmpty(publicationDTO.Description))
+                //{
+                //    return BadRequest();
+                //}
                 var command = new CreatePublicationCommand(publicationDTO);
-                var endpointResponse = await _mediator.Send(command);
-                if (endpointResponse.IsSuccess)
-                {
-                    return Ok(endpointResponse);
-                }
-                return BadRequest(endpointResponse);
+                var cancellationTokenSource = new CancellationTokenSource();
+                var cancellationToken = cancellationTokenSource.Token;
+                await _sagaOrchestrator.ExecuteAsync(command, cancellationToken);
+                //var endpointResponse = await _mediator.Send(command);
+                //if (endpointResponse.IsSuccess)
+                //{
+                //    return Ok(endpointResponse);
+                //}
+                //return BadRequest(endpointResponse);
+                return Ok("Publication created successfully");
             }
             catch (Exception ex)
             {
                 _applicationExceptionHandler.CaptureException<string>(ex, ApplicationLayer.Controller, ActionType.Insert);
-                return StatusCode(500); ;
+                return BadRequest($"Saga failed: {ex.Message}");
             }
         }
 
@@ -94,7 +101,7 @@ namespace PublicationsService.Controllers
         }
 
         [HttpPut("update-publication")]
-        public async Task<IActionResult> UpdatePublicationAsync(PublicationUpdateDTO retrieveDTO)
+        public async Task<IActionResult> UpdatePublicationAsync([FromBody] PublicationUpdateDTO retrieveDTO)
         {
             try
             {

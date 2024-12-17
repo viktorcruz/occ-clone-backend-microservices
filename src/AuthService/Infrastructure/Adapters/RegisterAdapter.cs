@@ -1,12 +1,14 @@
 ﻿using AuthService.Application.Commands;
 using AuthService.Application.DTO;
-using AuthService.Domain.Entities;
 using AuthService.Domain.Ports.Output;
 using AuthService.Infrastructure.Security;
-using SharedKernel.Common.Events;
-using SharedKernel.Common.Extensions;
-using SharedKernel.Common.Interfaces;
-using SharedKernel.Interface;
+using SharedKernel.Common.Interfaces.Logging;
+using SharedKernel.Events.Auth;
+using SharedKernel.Events.User;
+using SharedKernel.Extensions.Event;
+using SharedKernel.Extensions.Http;
+using SharedKernel.Extensions.Routing;
+using SharedKernel.Interfaces.Exceptions;
 
 namespace AuthService.Infrastructure.Adapters
 {
@@ -17,6 +19,7 @@ namespace AuthService.Infrastructure.Adapters
         private readonly IUserPort _userRepository;
         private readonly IEventPublisherService _eventPublisherService;
         private readonly IApplicationExceptionHandler _applicationExceptionHandler;
+        private readonly IHttpContextAccessor _contextAccessor;
         #endregion
 
         #region Constructor
@@ -24,14 +27,15 @@ namespace AuthService.Infrastructure.Adapters
             IRegisterUserPort registerRepository,
             IUserPort userRepository,
             IEventPublisherService eventPublisherService,
-            IApplicationExceptionHandler applicationExceptionHandler
+            IApplicationExceptionHandler applicationExceptionHandler,
+            IHttpContextAccessor contextAccessor
             )
         {
             _registerRepository = registerRepository;
             _userRepository = userRepository;
             _eventPublisherService = eventPublisherService;
             _applicationExceptionHandler = applicationExceptionHandler;
-            _applicationExceptionHandler = applicationExceptionHandler;
+            _contextAccessor = contextAccessor;
         }
         #endregion
 
@@ -56,7 +60,7 @@ namespace AuthService.Infrastructure.Adapters
                     throw new Exception("Password incorrect.");
                 }
 
-                var newUser = new RegisterEntity
+                var createdEvent = new UserCreatedEvent
                 {
                     IdRole = command.IdRole,
                     FirstName = command.FirstName,
@@ -65,31 +69,31 @@ namespace AuthService.Infrastructure.Adapters
                     PasswordHash = hashedPassword
                 };
 
-                var response = await _registerRepository.AddAsync(newUser);
+                var response = await _registerRepository.AddAsync(createdEvent);
+                createdEvent.IdUser = response.AffectedRecordId;
 
                 if (!response.ResultStatus && response.AffectedRecordId == 0)
                 {
                     throw new Exception(response.ExceptionMessage);
                 }
 
-                newUser.IdUser = response.AffectedRecordId;
-
                 await _eventPublisherService.PublishEventAsync(
-                    entityName: "Authorize",
-                    operationType: "Register",
+                    entityName: AuditEntityType.Authorize.ToEntityName(),
+                    operationType: AuditOperationType.Register.ToOperationType(),
                     success: true,
-                    performedBy: "Admin",
-                    additionalData: newUser,
+                    performedBy: _contextAccessor.GtePerformedBy(),
+                    reason: "User has registered",
+                    additionalData: createdEvent,
                     exchangeName: PublicationExchangeNames.Authorize.ToExchangeName(),
                     routingKey: PublicationRoutingKeys.Register_Success.ToRoutingKey()
                     );
 
                 var userResponse = new RegisterUserDTO
                 {
-                    IdRole = newUser.IdRole,
+                    IdRole = createdEvent.IdRole,
                     FirstName = command.FirstName,
                     LastName = command.LastName,
-                    Email = newUser.Email,
+                    Email = createdEvent.Email,
                     Password = "####"
                 };
 
@@ -98,25 +102,32 @@ namespace AuthService.Infrastructure.Adapters
             catch (Exception ex)
             {
                 _applicationExceptionHandler.CaptureException<string>(ex, ApplicationLayer.Adapter, ActionType.Register);
-
                 var registerErrorEvent = new RegisterErrorEvent
                 {
                     ErrorMessage = ex.Message,
                     StackTrace = ex.StackTrace
                 };
+                var failedEvent = new UserCreationFailedEvent
+                {
+                    IdRole = command.IdRole,
+                    FirstName = command.FirstName,
+                    LastName = command.LastName,
+                    Email = command.Email,
+                    Reason = registerErrorEvent
+                };
 
                 await _eventPublisherService.PublishEventAsync(
-                    entityName: "Authorize",
-                    operationType: "Register",
+                    entityName: AuditEntityType.Authorize.ToEntityName(),
+                    operationType: AuditOperationType.Register.ToOperationType(),
                     success: false,
-                    performedBy: "Admin",
+                    performedBy: _contextAccessor.GtePerformedBy(),
                     reason: ex.Message,
-                    additionalData: registerErrorEvent,
+                    additionalData: failedEvent,
                     exchangeName: PublicationExchangeNames.Authorize.ToExchangeName(),
                     routingKey: PublicationRoutingKeys.Register_Error.ToRoutingKey()
                     );
 
-                return null;
+                return new RegisterUserDTO { IdRole = command.IdRole, Email = command.Email, Password = command.Password };
             }
         }
         #endregion

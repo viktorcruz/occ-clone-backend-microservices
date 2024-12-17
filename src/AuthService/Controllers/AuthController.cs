@@ -1,8 +1,9 @@
 ﻿using AuthService.Application.Commands;
+using AuthService.Application.DTO;
 using AuthService.Application.Interfaces;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using SharedKernel.Common.Extensions;
-using SharedKernel.Interface;
+using SharedKernel.Interfaces.Exceptions;
 
 namespace AuthService.Controllers
 {
@@ -41,17 +42,17 @@ namespace AuthService.Controllers
         {
             try
             {
-                if (command == null || string.IsNullOrEmpty(command.Email) || string.IsNullOrEmpty(command.Password) || command.Password.Length < 8)
-                {
-                    return BadRequest();
-                }
+                //if (command == null || string.IsNullOrEmpty(command.Email) || string.IsNullOrEmpty(command.Password) || command.Password.Length < 8)
+                //{
+                //    return BadRequest();
+                //}
                 var response = await _loginUseCase.Execute(command);
                 return Ok(response);
             }
             catch (UnauthorizedAccessException ex)
             {
                 _applicationExceptionHandler.CaptureException<string>(ex, ApplicationLayer.Controller, ActionType.Login);
-                return Unauthorized(ex.Message);
+                return Unauthorized("Invalid credentials");
             }
             catch (Exception ex)
             {
@@ -65,13 +66,13 @@ namespace AuthService.Controllers
         {
             try
             {
-                if (command == null || command.IdRole <= 0
-                    || string.IsNullOrEmpty(command.Email)
-                    || string.IsNullOrEmpty(command.Password)
-                    || command.Password.Length < 8)
-                {
-                    return BadRequest();
-                }
+                //if (command == null || command.IdRole <= 0
+                //    || string.IsNullOrEmpty(command.Email)
+                //    || string.IsNullOrEmpty(command.Password)
+                //    || command.Password.Length < 8)
+                //{
+                //    return BadRequest();
+                //}
                 var response = await _registerUseCase.Execute(command);
                 return Ok(response);
             }
@@ -87,6 +88,7 @@ namespace AuthService.Controllers
             }
         }
 
+        [Authorize]
         [HttpPost("re-new")]
         public async Task<IActionResult> RenewToken([FromBody] RenewCommand command)
         {
@@ -113,12 +115,12 @@ namespace AuthService.Controllers
         }
 
         [HttpPut("confirm-registration")]
-        public async Task<IActionResult> ConfirmUserRegistration(string email)
+        public async Task<IActionResult> ConfirmUserRegistration([FromBody] ConfirmRegistrationDTO confirmDTO)
         {
             try
             {
-                if (string.IsNullOrEmpty(email)) { return BadRequest(); }
-                var command = new ConfirmRegisterCommand(email);
+                //if (string.IsNullOrEmpty(email)) { return BadRequest(); }
+                var command = new ConfirmRegisterCommand(confirmDTO);
                 var response = await _confirRegisterUserCase.Execute(command);
                 return Ok(response);
             }

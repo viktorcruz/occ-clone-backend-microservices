@@ -1,5 +1,5 @@
 ﻿using MediatR;
-using SharedKernel.Interface;
+using SharedKernel.Interfaces.Response;
 
 namespace PublicationsService.Aplication.Commands
 {

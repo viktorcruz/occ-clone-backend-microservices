@@ -1,5 +1,7 @@
 ﻿using SearchJobsService.Application.Commands;
-using SearchJobsService.Application.Dto;
+using SearchJobsService.Application.DTO;
+using SearchJobsService.Application.DTO.Commands;
+using SearchJobsService.Application.DTO.Queries;
 using SharedKernel.Common.Responses;
 
 namespace SearchJobsService.Infrastructure.Interface
@@ -10,5 +12,6 @@ namespace SearchJobsService.Infrastructure.Interface
         Task<DatabaseResult> WithdrawAsync(WithdrawApplicationRequestDTO withdrawDTO);
         Task<RetrieveDatabaseResult<List<JobSearchResultDTO>>> SearchAsync(string keyword);
         Task<RetrieveDatabaseResult<List<UserApplicationsResponseDTO>>> ApplicationsAsync(int userId);
+        Task<DatabaseResult> HasApplicationAsync(int userId, int applicationId);
     }
 }

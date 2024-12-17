@@ -1,9 +1,11 @@
 ﻿using AuthService.Application.DTO;
 using AuthService.Domain.Ports.Output;
-using SharedKernel.Common.Events;
-using SharedKernel.Common.Extensions;
-using SharedKernel.Common.Interfaces;
-using SharedKernel.Interface;
+using SharedKernel.Common.Interfaces.Logging;
+using SharedKernel.Events.Auth;
+using SharedKernel.Extensions.Event;
+using SharedKernel.Extensions.Http;
+using SharedKernel.Extensions.Routing;
+using SharedKernel.Interfaces.Exceptions;
 
 namespace AuthService.Infrastructure.Adapters
 {
@@ -13,18 +15,21 @@ namespace AuthService.Infrastructure.Adapters
         private readonly IUserPort _userRepository;
         private readonly IEventPublisherService _eventPublisherService;
         private readonly IApplicationExceptionHandler _applicationExceptionHandler;
+        private readonly IHttpContextAccessor _contextAccessor;
         #endregion
 
         #region Constructor
         public RenewTokenAdapter(
             IUserPort userRepository,
             IEventPublisherService eventPublisherService,
-            IApplicationExceptionHandler applicationExceptionHandler
+            IApplicationExceptionHandler applicationExceptionHandler,
+            IHttpContextAccessor contextAccessor
             )
         {
             _userRepository = userRepository;
             _eventPublisherService = eventPublisherService;
             _applicationExceptionHandler = applicationExceptionHandler;
+            _contextAccessor = contextAccessor;
         }
         #endregion
 
@@ -45,10 +50,11 @@ namespace AuthService.Infrastructure.Adapters
                 }
 
                 await _eventPublisherService.PublishEventAsync(
-                    entityName: "Authorize",
-                    operationType: "Renew",
+                    entityName: AuditEntityType.Authorize.ToEntityName(),
+                    operationType: AuditOperationType.Renew.ToOperationType(),
                     success: true,
-                    performedBy: "Admin",
+                    performedBy: _contextAccessor.GtePerformedBy(),
+                    reason: "The token has been renewed",
                     additionalData: new { IdUser = user.Details.IdUser, Email = user.Details.Email },
                     exchangeName: PublicationExchangeNames.Authorize.ToExchangeName(),
                     routingKey: PublicationRoutingKeys.Renew_Success.ToRoutingKey()
@@ -69,10 +75,10 @@ namespace AuthService.Infrastructure.Adapters
                     StackTrace = ex.StackTrace
                 };
                 await _eventPublisherService.PublishEventAsync(
-                    entityName: "Authorize",
-                    operationType: "Renew",
+                    entityName: AuditEntityType.Authorize.ToEntityName(),
+                    operationType: AuditOperationType.Renew.ToOperationType(),
                     success: false,
-                    performedBy: "Admin",
+                    performedBy: _contextAccessor.GtePerformedBy(),
                     reason: ex.Message,
                     additionalData: registerErrorEvent,
                     exchangeName: PublicationExchangeNames.Authorize.ToExchangeName(),

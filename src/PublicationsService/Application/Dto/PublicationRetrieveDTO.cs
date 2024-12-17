@@ -1,7 +1,8 @@
-﻿namespace PublicationsService.Aplication.Dto
+﻿namespace PublicationsService.Aplication.DTO
 {
     public class PublicationRetrieveDTO
     {
+
         public int IdPublication { get; set; }
         public int IdUser { get; set; }
         public int IdRole { get; set; }

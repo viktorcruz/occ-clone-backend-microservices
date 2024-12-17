@@ -1,11 +1,12 @@
-﻿using SharedKernel.Common.Events;
-using SharedKernel.Common.Extensions;
-using SharedKernel.Common.Interfaces;
+﻿using SharedKernel.Common.Interfaces.Logging;
+using SharedKernel.Events.JobSearch;
+using SharedKernel.Extensions.Routing;
 using UsersService.Infrastructure.Interface;
+using UsersService.Saga.Interfaces;
 
 namespace UsersService.Saga
 {
-    public class CompensationActions
+    public class CompensationActions : ICompensationActions
     {
         private readonly IUserRepository _userRepository;
         private readonly IEventPublisherService _eventPublisherService;
@@ -18,7 +19,7 @@ namespace UsersService.Saga
             _eventPublisherService = eventPublisherService;
         }
 
-        public async Task CompensateCreateUserAsync(UserSagaContext sagaState)
+        public async Task CompensateCreateUserAsync(IUserSagaContext sagaState)
         {
             if (sagaState.IsJobSearchUpdated)
             {

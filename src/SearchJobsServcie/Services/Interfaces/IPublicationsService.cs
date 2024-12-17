@@ -1,4 +1,4 @@
-﻿using SharedKernel.Common.Events;
+﻿using SharedKernel.Events.Publication;
 
 namespace SearchJobsService.Services.Interfaces
 {

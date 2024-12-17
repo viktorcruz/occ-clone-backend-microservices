@@ -1,10 +1,14 @@
 ﻿using AuthService.Application.Commands;
 using AuthService.Application.DTO;
 using AuthService.Domain.Ports.Output;
-using SharedKernel.Common.Events;
-using SharedKernel.Common.Extensions;
-using SharedKernel.Common.Interfaces;
-using SharedKernel.Interface;
+using SharedKernel.Common.Interfaces.Logging;
+using SharedKernel.Events.Auth;
+using SharedKernel.Extensions.Audit;
+using SharedKernel.Extensions.Event;
+using SharedKernel.Extensions.Http;
+using SharedKernel.Extensions.Routing;
+using SharedKernel.Interfaces.Exceptions;
+using SharedKernel.Interfaces.Service;
 
 namespace AuthService.Infrastructure.Adapters
 {
@@ -14,24 +18,29 @@ namespace AuthService.Infrastructure.Adapters
         private readonly IUserPort _userRepository;
         private readonly IEventPublisherService _eventPublisherService;
         private readonly IApplicationExceptionHandler _applicationExceptionHandler;
-
+        private readonly IHttpContextAccessor _contextAccessor;
+        private readonly ICorrelationService _correlationService;
         #endregion
 
         #region Constructor
         public ConfirmRegisterAdapter(
             IUserPort userRepository,
             IEventPublisherService eventPublisherService,
-            IApplicationExceptionHandler applicationExceptionHandler
+            IApplicationExceptionHandler applicationExceptionHandler,
+            IHttpContextAccessor contextAccessor,
+            ICorrelationService correlationService
             )
         {
             _userRepository = userRepository;
             _applicationExceptionHandler = applicationExceptionHandler;
             _eventPublisherService = eventPublisherService;
+            _contextAccessor = contextAccessor;
+            _correlationService = correlationService;
         }
         #endregion
 
         #region Methods
-        public async Task<ConfirmRegisterResponseDTO> ConfirmRegisterAsync(ConfirmRegisterCommand command)
+        public async Task<ConfirmRegisterResponseDTO?> ConfirmRegisterAsync(ConfirmRegisterCommand command)
         {
             try
             {
@@ -56,14 +65,16 @@ namespace AuthService.Infrastructure.Adapters
                     IsActive = updateUser.ResultStatus ? true : false,
                     ActiveStatusDescription = "User has been activated",
                     IsRegistrationConfirmed = updateUser.ResultStatus ? true : false,
-                    RegistrationConfirmationDescription = "User registration is confirmed"
+                    RegistrationConfirmationDescription = "User registration is confirmed",
                 };
 
+
                 await _eventPublisherService.PublishEventAsync(
-                    entityName: "Authorize",
-                    operationType: "Login",
+                    entityName: AuditEntityType.Authorize.ToEntityName(),
+                    operationType: AuditOperationType.Login.ToOperationType(),
                     success: true,
-                    performedBy: "Admin",
+                    performedBy: _contextAccessor.GtePerformedBy(),
+                    reason: "User's email has been confirmed",
                     additionalData: response,
                     exchangeName: PublicationExchangeNames.Authorize.ToExchangeName(),
                     routingKey: PublicationRoutingKeys.Confirmation_Success.ToRoutingKey()
@@ -73,22 +84,44 @@ namespace AuthService.Infrastructure.Adapters
             }
             catch (Exception ex)
             {
-                _applicationExceptionHandler.CaptureException<string>(ex, ApplicationLayer.Adapter, ActionType.Update);
                 var errorEvent = new RegisterErrorEvent
                 {
                     ErrorMessage = ex.Message,
-                    StackTrace = ex.StackTrace
+                    StackTrace = ex.StackTrace ?? string.Empty
                 };
+
+                //var auditEvent = new AuditEventEntity
+                //{
+                //    EntityName = AuditEntityType.Authorize.ToEntityName(),
+                //    OperationType = AuditOperationType.Login.ToOperationType(),
+                //    Success = true,
+                //    PerformedBy = "",
+                //    Reason = ex.Message,
+                //    AdditionalData = errorEvent
+                //};
+
+                //var capturaDTO = new AuditExceptionDTO
+                //{
+                //    Exception = ex,
+                //    ApplicationLayer = ApplicationLayer.Adapter,
+                //    ActionType = ActionType.Update,
+                //    AuditTracking = _correlationService.GetCorrelationId()
+                //};
+
+                var capturaDTO = AuditDataExtension.CreateAuditException(ex, ApplicationLayer.Adapter, ActionType.Update, _correlationService.GetCorrelationId());
+
                 await _eventPublisherService.PublishEventAsync(
-                    entityName: "Auhotize",
-                    operationType: "Login",
+                    entityName: AuditEntityType.Authorize.ToEntityName(),
+                    operationType: AuditOperationType.Login.ToOperationType(),
                     success: false,
-                    performedBy: "Admin",
+                    performedBy: _contextAccessor.GtePerformedBy(),
                     reason: ex.Message,
                     additionalData: errorEvent,
                     exchangeName: PublicationExchangeNames.Authorize.ToExchangeName(),
                     routingKey: PublicationRoutingKeys.Confirmation_Error.ToRoutingKey()
                     );
+
+                _applicationExceptionHandler.CaptureException<string>(capturaDTO);
 
                 return null;
             }

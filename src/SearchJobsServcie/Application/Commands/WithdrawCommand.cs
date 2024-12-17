@@ -1,6 +1,6 @@
 ﻿using MediatR;
-using SearchJobsService.Application.Dto;
-using SharedKernel.Interface;
+using SearchJobsService.Application.DTO.Commands;
+using SharedKernel.Interfaces.Response;
 
 namespace SearchJobsService.Application.Commands
 {

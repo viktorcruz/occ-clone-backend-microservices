@@ -1,9 +1,12 @@
 ﻿using MediatR;
 using PublicationsService.Domain.Interface;
-using SharedKernel.Common.Events;
-using SharedKernel.Common.Extensions;
-using SharedKernel.Common.Interfaces;
-using SharedKernel.Interface;
+using SharedKernel.Common.Interfaces.Logging;
+using SharedKernel.Events.Auth;
+using SharedKernel.Extensions.Event;
+using SharedKernel.Extensions.Http;
+using SharedKernel.Extensions.Routing;
+using SharedKernel.Interfaces.Exceptions;
+using SharedKernel.Interfaces.Response;
 
 namespace PublicationsService.Aplication.Commands.Handlers
 {
@@ -14,6 +17,7 @@ namespace PublicationsService.Aplication.Commands.Handlers
         private readonly IEventPublisherService _eventPublisherService;
         private readonly IApplicationExceptionHandler _applicationExceptionHandler;
         private readonly IEndpointResponse<IDatabaseResult> _endpointResponse;
+        private readonly IHttpContextAccessor _contextAccessor;
         #endregion
 
         #region Constructor
@@ -21,13 +25,15 @@ namespace PublicationsService.Aplication.Commands.Handlers
             IPublicationDomain publicationDomain,
             IEventPublisherService eventPublisherService,
             IApplicationExceptionHandler applicationExceptionHandler,
-            IEndpointResponse<IDatabaseResult> endpointResponse
+            IEndpointResponse<IDatabaseResult> endpointResponse,
+            IHttpContextAccessor contextAccessor
             )
         {
             _publicationDomain = publicationDomain;
             _eventPublisherService = eventPublisherService;
             _applicationExceptionHandler = applicationExceptionHandler;
             _endpointResponse = endpointResponse;
+            _contextAccessor = contextAccessor;
         }
         #endregion
 
@@ -40,66 +46,54 @@ namespace PublicationsService.Aplication.Commands.Handlers
 
                 _endpointResponse.Result = response;
 
-                if (response != null && response.ResultStatus)
+                if (response == null || !response.ResultStatus)
                 {
-                    _endpointResponse.IsSuccess = true;
-                    _endpointResponse.Message = "Publication created successful";
-
-                    var additionalData = new
-                    {
-                        IdUser = request.IdUser,
-                        IdRole = request.IdRole,
-                        Title = request.Title,
-                        Description = request.Description,
-                        ExpirationDate = request.ExpirationDate,
-                        Status = request.Status,
-                        Salary = request.Salary,
-                        Location = request.Location,
-                    };
-
-                    await _eventPublisherService.PublishEventAsync(
-                        entityName: "Publication",
-                        operationType: "CREATE",
-                        success: true,
-                        performedBy: "Admin",
-                        reason: response?.ResultMessage,
-                        additionalData: additionalData,
-                        "publication_exchange",
-                        "publication.created"
-                        );
+                    throw new Exception("User not found");
                 }
-                else
+
+                _endpointResponse.IsSuccess = true;
+                _endpointResponse.Message = "Publication created successful";
+
+                var additionalData = new
                 {
-                    _endpointResponse.IsSuccess = false;
-                    _endpointResponse.Message = response?.ResultMessage ?? "Publication not created";
+                    IdUser = request.IdUser,
+                    IdRole = request.IdRole,
+                    Title = request.Title,
+                    Description = request.Description,
+                    ExpirationDate = request.ExpirationDate,
+                    Status = request.Status,
+                    Salary = request.Salary,
+                    Location = request.Location,
+                };
 
-                    await _eventPublisherService.PublishEventAsync(
-                        entityName: "Publication",
-                        operationType: "CREATE",
-                        success: false,
-                        performedBy: "Admin",
-                        reason: response?.ResultMessage,
-                        additionalData: null,
-                        exchangeName: PublicationExchangeNames.Publication.ToExchangeName(),
-                        routingKey: PublicationRoutingKeys.Create_Failed.ToRoutingKey()
-                        );
-                }
+                await _eventPublisherService.PublishEventAsync(
+                    entityName: AuditEntityType.Publication.ToEntityName(),
+                    operationType: AuditOperationType.Create.ToOperationType(),
+                    success: true,
+                    performedBy: _contextAccessor.GtePerformedBy(),
+                    reason: response.ResultMessage,
+                    additionalData: additionalData,
+                    exchangeName: PublicationExchangeNames.Publication.ToExchangeName(),
+                    routingKey: PublicationRoutingKeys.Created.ToRoutingKey()
+                );
             }
             catch (Exception ex)
             {
                 _applicationExceptionHandler.CaptureException<string>(ex, ApplicationLayer.Repository, ActionType.Query);
                 _endpointResponse.IsSuccess = false;
                 _endpointResponse.Message = $"Error creating publication: {ex.Message}";
+
                 var registerErrorEvent = new RegisterErrorEvent
                 {
                     ErrorMessage = ex.Message,
                     StackTrace = ex.StackTrace
                 };
+
                 await _eventPublisherService.PublishEventAsync(
-                    entityName: "Publication",
-                    operationType: "CREATE",
+                    entityName: AuditEntityType.Publication.ToEntityName(),
+                    operationType: AuditOperationType.Create.ToOperationType(),
                     success: false,
-                    performedBy: "Admin",
+                    performedBy: _contextAccessor.GtePerformedBy(),
                     reason: ex.Message,
                     additionalData: registerErrorEvent,
                     exchangeName: PublicationExchangeNames.Publication.ToExchangeName(),

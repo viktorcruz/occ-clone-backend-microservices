@@ -1,4 +1,4 @@
-﻿using SharedKernel.Common.Events;
+﻿using SharedKernel.Events.User;
 
 namespace PublicationsService.Services.Interfaces
 {

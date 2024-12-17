@@ -1,11 +1,13 @@
 ﻿using MediatR;
-using PublicationsService.Aplication.Dto;
-using PublicationsService.Application.Dto;
+using PublicationsService.Application.DTO;
 using PublicationsService.Domain.Interface;
-using SharedKernel.Common.Events;
-using SharedKernel.Common.Extensions;
-using SharedKernel.Common.Interfaces;
-using SharedKernel.Interface;
+using SharedKernel.Common.Interfaces.Logging;
+using SharedKernel.Events.Auth;
+using SharedKernel.Extensions.Event;
+using SharedKernel.Extensions.Http;
+using SharedKernel.Extensions.Routing;
+using SharedKernel.Interfaces.Exceptions;
+using SharedKernel.Interfaces.Response;
 
 namespace PublicationsService.Aplication.Commands.Handlers
 {
@@ -16,8 +18,7 @@ namespace PublicationsService.Aplication.Commands.Handlers
         private readonly IEventPublisherService _eventPublisherService;
         private readonly IApplicationExceptionHandler _applicationExceptionHandler;
         private readonly IEndpointResponse<IDatabaseResult> _endpointResponse;
-        private readonly IEventBus _eventBus;
-        private readonly IEntityOperationEventFactory _entityOperationEventFactory;
+        private readonly IHttpContextAccessor _contextAccessor;
         #endregion
 
         #region Constructor
@@ -26,16 +27,14 @@ namespace PublicationsService.Aplication.Commands.Handlers
             IEventPublisherService eventPublisherService,
             IApplicationExceptionHandler applicationExceptionHandler,
             IEndpointResponse<IDatabaseResult> endpointResponse,
-            IEventBus eventBus,
-            IEntityOperationEventFactory entityOperationEventFactory
+            IHttpContextAccessor contextAccessor
             )
         {
             _publicationDomain = publicationDomain;
             _eventPublisherService = eventPublisherService;
             _applicationExceptionHandler = applicationExceptionHandler;
             _endpointResponse = endpointResponse;
-            _eventBus = eventBus;
-            _entityOperationEventFactory = entityOperationEventFactory;
+            _contextAccessor = contextAccessor;
         }
         #endregion
 
@@ -60,54 +59,42 @@ namespace PublicationsService.Aplication.Commands.Handlers
                 var response = await _publicationDomain.UpdatePublicationAsync(publication);
                 _endpointResponse.Result = response;
 
-                if (response != null && response.ResultStatus)
+                if (response == null || !response.ResultStatus)
                 {
-                    _endpointResponse.IsSuccess = true;
-                    _endpointResponse.Message = "Publication updated successful";
-
-                    await _eventPublisherService.PublishEventAsync(
-                        entityName: "Publication",
-                        operationType: "UPDATE",
-                        success: true,
-                        performedBy: "Admin",
-                        reason: response?.ResultMessage ?? "Publication not found",
-                        additionalData: publication,
-                        exchangeName: PublicationExchangeNames.Publication.ToExchangeName(),
-                        routingKey: PublicationRoutingKeys.Update_Success.ToRoutingKey()
-                        );
+                    throw new Exception($"Publication not found {request.IdPubliaction}");
                 }
-                else
-                {
-                    _endpointResponse.IsSuccess = false;
-                    _endpointResponse.Message = response?.ResultMessage ?? "Publication not found";
 
-                    await _eventPublisherService.PublishEventAsync(
-                        entityName: "Publication",
-                        operationType: "UPDATE",
-                        success: false,
-                        performedBy: "Admin",
-                        reason: response?.ResultMessage ?? "Publication not found",
-                        additionalData: publication,
-                        exchangeName: PublicationExchangeNames.Publication.ToExchangeName(),
-                        routingKey: PublicationRoutingKeys.Update_Error.ToRoutingKey()
-                        );
-                }
+                _endpointResponse.IsSuccess = true;
+                _endpointResponse.Message = "Publication updated successful";
+
+                await _eventPublisherService.PublishEventAsync(
+                    entityName: AuditEntityType.Publication.ToEntityName(),
+                    operationType: AuditOperationType.Update.ToOperationType(),
+                    success: true,
+                    performedBy: _contextAccessor.GtePerformedBy(),
+                    reason: response?.ResultMessage ?? "Publication not found",
+                    additionalData: publication,
+                    exchangeName: PublicationExchangeNames.Publication.ToExchangeName(),
+                    routingKey: PublicationRoutingKeys.Update_Success.ToRoutingKey()
+                    );
             }
             catch (Exception ex)
             {
                 _applicationExceptionHandler.CaptureException<string>(ex, ApplicationLayer.Handler, ActionType.Update);
                 _endpointResponse.IsSuccess = false;
                 _endpointResponse.Message = $"Error updating publication: {ex.Message}";
+
                 var eventError = new RegisterErrorEvent
                 {
                     ErrorMessage = ex.Message,
                     StackTrace = ex.StackTrace
                 };
+
                 await _eventPublisherService.PublishEventAsync(
-                    entityName: "Publication",
-                    operationType: "UPDATE",
+                    entityName: AuditEntityType.Publication.ToEntityName(),
+                    operationType: AuditOperationType.Update.ToOperationType(),
                     success: false,
-                    performedBy: "Admin",
+                    performedBy: _contextAccessor.GtePerformedBy(),
                     reason: ex.Message,
                     additionalData: eventError,
                     exchangeName: PublicationExchangeNames.Publication.ToExchangeName(),

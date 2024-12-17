@@ -1,9 +1,9 @@
-﻿using Dapper;
+﻿//using Dapper;
 
-namespace AuthService.Domain.Ports.Output
-{
-    public interface IEventLogPort
-    {
-        Task SaveEventLog(string query, DynamicParameters parameters);
-    }
-}
+//namespace AuthService.Domain.Ports.Output
+//{
+//    public interface IEventLogPort
+//    {
+//        Task SaveEventLog(string query, DynamicParameters parameters);
+//    }
+//}

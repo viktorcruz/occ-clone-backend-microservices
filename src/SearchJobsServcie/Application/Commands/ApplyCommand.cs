@@ -1,7 +1,7 @@
 ﻿using MediatR;
-using SearchJobsService.Application.Dto;
-using SearchJobsService.Domain.Enum;
-using SharedKernel.Interface;
+using SearchJobsService.Application.DTO.Commands;
+using SharedKernel.Extensions;
+using SharedKernel.Interfaces.Response;
 
 namespace SearchJobsService.Application.Commands
 {
@@ -14,10 +14,15 @@ namespace SearchJobsService.Application.Commands
         public string? ApplicantResume { get; set; }
         public string? CoverLetter { get; set; }
         public DateTime ApplicationDate { get; set; }
-        //public RecruitmentStatus Status { get; set; }
+        public int Status { get; set; }
+        public string StatusMessage { get; set; }
         #endregion
 
         #region Constructor
+        public ApplyCommand()
+        {
+            
+        }
         public ApplyCommand(JobApplicationRequestDTO applyDto)
         {
             IdPublication = applyDto.IdPublication;
@@ -26,40 +31,41 @@ namespace SearchJobsService.Application.Commands
             ApplicantResume = applyDto.ApplicantResume;
             CoverLetter = applyDto.CoverLetter;
             ApplicationDate = DateTime.UtcNow;
-            //Status = applyDto.Status;
+            Status = applyDto.Status;
+            StatusMessage = RecruitmentStatusExtension.ToFriendlyString(applyDto.Status);
         }
         #endregion
 
-        #region Methods
-        public string GetRecruitmentStatus(RecruitmentStatus status)
-        {
-            string recruitment = string.Empty;
-            switch (status)
-            {
-                case RecruitmentStatus.Without_Applying:
-                    recruitment = RecruitmentStatus.Without_Applying.ToString().ToLower();
-                    break;
-                case RecruitmentStatus.Applied:
-                    recruitment = RecruitmentStatus.Applied.ToString().ToLower();
-                    break;
-                case RecruitmentStatus.In_Review:
-                    recruitment = RecruitmentStatus.In_Review.ToString().ToLower();
-                    break;
-                case RecruitmentStatus.Offer_Accepted:
-                    recruitment = RecruitmentStatus.Offer_Accepted.ToString().ToLower();
-                    break;
-                case RecruitmentStatus.Offer_Declined:
-                    recruitment = RecruitmentStatus.Offer_Declined.ToString().ToLower();
-                    break;
-                case RecruitmentStatus.Rejected:
-                    recruitment = RecruitmentStatus.Rejected.ToString().ToLower();
-                    break;
-                case RecruitmentStatus.Withdrawn:
-                    recruitment = RecruitmentStatus.Withdrawn.ToString().ToLower();
-                    break;
-            }
-            return recruitment;
-        }
-        #endregion
+        //#region Methods
+        //public string GetRecruitmentStatus(RecruitmentStatus status)
+        //{
+        //    string recruitment = string.Empty;
+        //    switch (status)
+        //    {
+        //        case RecruitmentStatus.Without_Applying:
+        //            recruitment = RecruitmentStatus.Without_Applying.ToString().ToLower();
+        //            break;
+        //        case RecruitmentStatus.Applied:
+        //            recruitment = RecruitmentStatus.Applied.ToString().ToLower();
+        //            break;
+        //        case RecruitmentStatus.In_Review:
+        //            recruitment = RecruitmentStatus.In_Review.ToString().ToLower();
+        //            break;
+        //        case RecruitmentStatus.Offer_Accepted:
+        //            recruitment = RecruitmentStatus.Offer_Accepted.ToString().ToLower();
+        //            break;
+        //        case RecruitmentStatus.Offer_Declined:
+        //            recruitment = RecruitmentStatus.Offer_Declined.ToString().ToLower();
+        //            break;
+        //        case RecruitmentStatus.Rejected:
+        //            recruitment = RecruitmentStatus.Rejected.ToString().ToLower();
+        //            break;
+        //        case RecruitmentStatus.Withdrawn:
+        //            recruitment = RecruitmentStatus.Withdrawn.ToString().ToLower();
+        //            break;
+        //    }
+        //    return recruitment;
+        //}
+        //#endregion
     }
 }

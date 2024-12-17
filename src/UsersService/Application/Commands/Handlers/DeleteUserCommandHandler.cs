@@ -1,9 +1,12 @@
 ﻿using MediatR;
-using Microsoft.AspNetCore.Http.Connections;
-using SharedKernel.Common.Events;
-using SharedKernel.Common.Extensions;
-using SharedKernel.Common.Interfaces;
-using SharedKernel.Interface;
+using SharedKernel.Common.Interfaces.Logging;
+using SharedKernel.Events.Auth;
+using SharedKernel.Extensions.Audit;
+using SharedKernel.Extensions.Event;
+using SharedKernel.Extensions.Http;
+using SharedKernel.Extensions.Routing;
+using SharedKernel.Interfaces.Exceptions;
+using SharedKernel.Interfaces.Response;
 using UsersService.Domain.Interface;
 
 namespace UsersService.Application.Commands.Handlers
@@ -15,6 +18,7 @@ namespace UsersService.Application.Commands.Handlers
         private readonly IApplicationExceptionHandler _applicationExceptionHandler;
         private readonly IEndpointResponse<IDatabaseResult> _endpointResponse;
         private readonly IEventPublisherService _eventPublisherService;
+        private readonly IHttpContextAccessor _contextAccessor;
         #endregion
 
         #region Constructor
@@ -22,13 +26,15 @@ namespace UsersService.Application.Commands.Handlers
             IUserDomain usersDomain,
             IApplicationExceptionHandler applicationExceptionHandler,
             IEndpointResponse<IDatabaseResult> endpointResponse,
-            IEventPublisherService eventPublisherService
+            IEventPublisherService eventPublisherService,
+            IHttpContextAccessor contextAccessor
             )
         {
             _usersDomain = usersDomain;
             _applicationExceptionHandler = applicationExceptionHandler;
             _endpointResponse = endpointResponse;
             _eventPublisherService = eventPublisherService;
+            _contextAccessor = contextAccessor;
         }
         #endregion
 
@@ -53,31 +59,15 @@ namespace UsersService.Application.Commands.Handlers
                     };
 
                     await _eventPublisherService.PublishEventAsync(
-                        entityName: "User",
-                        operationType: "DELETE",
+                        entityName: AuditEntityType.User.ToEntityName(),
+                        operationType: AuditOperationType.Delete.ToOperationType(),
                         success: true,
-                        performedBy: "Admin",
+                        performedBy: _contextAccessor.GtePerformedBy(),
                         reason: response.ResultStatus.ToString(),
                         additionalData: additionalData,
                         exchangeName: PublicationExchangeNames.User.ToExchangeName(),
                         routingKey: PublicationRoutingKeys.Delete_Success.ToRoutingKey()
-                        );
-                }
-                else
-                {
-                    _endpointResponse.IsSuccess = false;
-                    _endpointResponse.Message = response?.ResultMessage ?? "User not found";
-
-                    await _eventPublisherService.PublishEventAsync(
-                        entityName: "User",
-                        operationType: "DELETE",
-                        success: false,
-                        performedBy: "Admin",
-                        reason: response?.ResultMessage ?? "User not found",
-                        additionalData: null,
-                        exchangeName: PublicationExchangeNames.User.ToExchangeName(),
-                        routingKey: PublicationRoutingKeys.Delete_Failed.ToRoutingKey()
-                        );
+                    );
                 }
             }
             catch (Exception ex)
@@ -85,16 +75,18 @@ namespace UsersService.Application.Commands.Handlers
                 _applicationExceptionHandler.CaptureException<string>(ex, ApplicationLayer.Handler, ActionType.Delete);
                 _endpointResponse.IsSuccess = false;
                 _endpointResponse.Message = $"Error deleting user: {ex.Message}";
+
                 var errorEvent = new RegisterErrorEvent
                 {
                     ErrorMessage = ex.Message,
                     StackTrace = ex.StackTrace
                 };
+
                 await _eventPublisherService.PublishEventAsync(
-                    entityName: "User",
-                    operationType: "DELETE",
+                    entityName: AuditEntityType.User.ToEntityName(),
+                    operationType: AuditOperationType.Delete.ToOperationType(),
                     success: true,
-                    performedBy: "Admin",
+                    performedBy: _contextAccessor.GtePerformedBy(),
                     reason: ex.Message,
                     additionalData: errorEvent,
                     exchangeName: PublicationExchangeNames.User.ToExchangeName(),

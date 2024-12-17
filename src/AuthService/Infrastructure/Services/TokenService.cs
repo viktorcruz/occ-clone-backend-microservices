@@ -2,7 +2,7 @@
 using AuthService.Domain.Entities;
 using AuthService.Domain.Ports.Output.Services;
 using Microsoft.IdentityModel.Tokens;
-using SharedKernel.Interface;
+using SharedKernel.Interfaces.Exceptions;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
@@ -37,12 +37,11 @@ namespace AuthService.Infrastructure.Services
             {
                 var claims = new[]
                 {
-                new Claim(JwtRegisteredClaimNames.Sub, user.IdUser.ToString()),
-                new Claim(ClaimTypes.Role, user.IdRole.ToString()),
-                new Claim(ClaimTypes.NameIdentifier, user.IdUser.ToString()),
-                new Claim(JwtRegisteredClaimNames.Email, user.Email),
-                new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
-            };
+                    new Claim(JwtRegisteredClaimNames.Sub, user.IdRole.ToString()),
+                    new Claim(ClaimTypes.Role, user.Role),
+                    new Claim(JwtRegisteredClaimNames.Email, user.Email),
+                    new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
+                };
 
                 var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_secretKey));
 

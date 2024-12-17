@@ -2,9 +2,9 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SearchJobsService.Application.Commands;
-using SearchJobsService.Application.Dto;
+using SearchJobsService.Application.DTO.Commands;
 using SearchJobsService.Application.Queries;
-using SharedKernel.Interface;
+using SharedKernel.Interfaces.Exceptions;
 
 namespace SearchJobsService.Controllers
 {
@@ -33,22 +33,29 @@ namespace SearchJobsService.Controllers
         {
             try
             {
+                Console.WriteLine("[Controller] Received job application request.");
 
-                if (requestDTO.IdPublication == 0 || requestDTO.IdApplicant == 0 || string.IsNullOrEmpty(requestDTO.ApplicantName))
-                {
-                    return BadRequest();
-                }
+                //if (requestDTO.IdPublication == 0 || requestDTO.IdApplicant == 0 || string.IsNullOrEmpty(requestDTO.ApplicantName))
+                //{
+                //    return BadRequest();
+                //}
 
                 var command = new ApplyCommand(requestDTO);
                 var endpointResponse = await _mediator.Send(command);
                 if (endpointResponse.IsSuccess)
                 {
+                    Console.WriteLine("[Controller] Job application processed successfully.");
+
                     return Ok(endpointResponse);
                 }
+                Console.WriteLine("[Controller] Job application failed.");
+
                 return BadRequest(endpointResponse);
             }
             catch (Exception ex)
             {
+                Console.WriteLine($"[Controller] Error while processing job application: {ex.Message}");
+
                 _applicationExceptionHandler.CaptureException<string>(ex, ApplicationLayer.Controller, ActionType.Apply);
                 return BadRequest(ex);
             }
@@ -88,7 +95,7 @@ namespace SearchJobsService.Controllers
                 }
                 return BadRequest($"Search: {keyword}");
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 _applicationExceptionHandler.CaptureException<string>(ex, ApplicationLayer.Controller, ActionType.FetchAll);
                 return BadRequest(ex);

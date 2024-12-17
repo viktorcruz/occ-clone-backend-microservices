@@ -1,10 +1,9 @@
-﻿using AuthService.Domain.Entities;
-using AuthService.Domain.Ports.Output;
+﻿using AuthService.Domain.Ports.Output;
 using Dapper;
-using SharedKernel.Common.Events;
-using SharedKernel.Common.Interfaces;
+using SharedKernel.Common.Interfaces.Persistence;
 using SharedKernel.Common.Responses;
-using SharedKernel.Interface;
+using SharedKernel.Events.User;
+using SharedKernel.Interfaces.Exceptions;
 using System.Data;
 
 namespace AuthService.Infrastructure.Repository
@@ -26,7 +25,7 @@ namespace AuthService.Infrastructure.Repository
         #endregion
 
         #region Methods
-        public async Task<DatabaseResult> AddAsync(RegisterEntity registerEntity)
+        public async Task<DatabaseResult> AddAsync(UserCreatedEvent createdEvent)
         {
             using (var connection = _sqlServerConnection.GetConnection(OCC_Connection))
             {
@@ -38,11 +37,11 @@ namespace AuthService.Infrastructure.Repository
                     {
                         var query = "Usp_Users_Add";
                         var parameters = new DynamicParameters();
-                        parameters.Add("@IdRole", registerEntity.IdRole);
-                        parameters.Add("@FirstName", registerEntity.FirstName);
-                        parameters.Add("@LastName", registerEntity.LastName);
-                        parameters.Add("@Email", registerEntity.Email);
-                        parameters.Add("@PasswordHash", registerEntity.PasswordHash);
+                        parameters.Add("@IdRole", createdEvent.IdRole);
+                        parameters.Add("@FirstName", createdEvent.FirstName);
+                        parameters.Add("@LastName", createdEvent.LastName);
+                        parameters.Add("@Email", createdEvent.Email);
+                        parameters.Add("@PasswordHash", createdEvent.PasswordHash);
 
                         var results = await connection.QuerySingleAsync<DatabaseResult>(
                                 query,

@@ -1,10 +1,13 @@
 ﻿using MediatR;
-using Microsoft.AspNetCore.Identity;
-using SharedKernel.Common.Events;
-using SharedKernel.Common.Extensions;
-using SharedKernel.Common.Interfaces;
-using SharedKernel.Interface;
+using SharedKernel.Common.Interfaces.Logging;
+using SharedKernel.Events.Auth;
+using SharedKernel.Extensions.Audit;
+using SharedKernel.Extensions.Http;
+using SharedKernel.Extensions.Routing;
+using SharedKernel.Interfaces.Exceptions;
+using SharedKernel.Interfaces.Response;
 using SharedKernel.Security.Extensions;
+using System.Security.Claims;
 using UsersService.Domain.Interface;
 
 namespace UsersService.Application.Commands.Handlers
@@ -16,6 +19,7 @@ namespace UsersService.Application.Commands.Handlers
         private readonly IApplicationExceptionHandler _applicationExceptionHandler;
         private readonly IEndpointResponse<IDatabaseResult> _endpointResponse;
         private readonly IEventPublisherService _eventPublisherService;
+        private readonly IHttpContextAccessor _contextAccessor;
         #endregion
 
         #region Constructor
@@ -23,13 +27,15 @@ namespace UsersService.Application.Commands.Handlers
             IUserDomain userDomain,
             IApplicationExceptionHandler applicationExceptionHandler,
             IEndpointResponse<IDatabaseResult> endpointResponse,
-            IEventPublisherService eventPublisherService
+            IEventPublisherService eventPublisherService,
+            IHttpContextAccessor contextAccessor
             )
         {
             _userDomain = userDomain;
             _applicationExceptionHandler = applicationExceptionHandler;
             _eventPublisherService = eventPublisherService;
             _endpointResponse = endpointResponse;
+            _contextAccessor = contextAccessor;
         }
         #endregion
 
@@ -64,44 +70,56 @@ namespace UsersService.Application.Commands.Handlers
                 }
 
                 var response = await _userDomain.ChangeUserPasswordAsync(existingUser.Details.IdUser, hashedPassword, existingUser.Details.Email);
-
-                var newPassword = new
-                {
-                    IdUser = existingUser.Details?.IdUser,
-                    Email = existingUser.Details?.Email,
-                    Message = "Successfully updated"
-                };
-
-                await _eventPublisherService.PublishEventAsync(
-                    entityName: "User",
-                    operationType: "CHANGE_PASSWORD",
-                    success: true,
-                    performedBy: "Admin",
-                    additionalData: newPassword,
-                    exchangeName: PublicationExchangeNames.User.ToExchangeName(),
-                    routingKey: PublicationRoutingKeys.Update_Success.ToRoutingKey()
-                );
-
-                _endpointResponse.IsSuccess = true;
-                _endpointResponse.Message = "Successfully updated";
                 _endpointResponse.Result = response;
 
-                return _endpointResponse;
+                if (response != null && response.ResultStatus)
+                {
+                    _endpointResponse.IsSuccess = true;
+                    _endpointResponse.Message = "Successfully updated";
+
+                    var newPasswd = AuditDataExtension.CreatePasswordAuditData(existingUser.Details.IdUser, existingUser.Details.Email, _contextAccessor.GtePerformedBy());
+
+                    var auditEvent = AuditDataExtension.CreateAuditEvent(newPasswd, _contextAccessor.GtePerformedBy(), true, _endpointResponse.Message);
+
+                    await _eventPublisherService.PublishEventAsync(
+                        entityName: auditEvent.EntityName,
+                        operationType: auditEvent.OperationType,
+                        success: auditEvent.Success,
+                        performedBy: auditEvent.PerformedBy,
+                        reason: auditEvent.Reason,
+                        additionalData: newPasswd,
+                        exchangeName: PublicationExchangeNames.User.ToExchangeName(),
+                        routingKey: PublicationRoutingKeys.Update_Success.ToRoutingKey()
+                    );                
+                }
             }
             catch(Exception ex)
             {
                 _applicationExceptionHandler.CaptureException<string>(ex, ApplicationLayer.Handler, ActionType.Update);
                 _endpointResponse.IsSuccess = false;
                 _endpointResponse.Message = $"Error when cahnging password: {ex.Message}";
+
                 var errorEvent = new RegisterErrorEvent
                 {
                     ErrorMessage = ex.Message,
-                    StackTrace = ex.StackTrace
+                    StackTrace = ex.StackTrace ?? "unkown"
                 };
+                
+                var auditEvent = AuditDataExtension.CreateAuditEvent(errorEvent, _contextAccessor.GtePerformedBy(), false, _endpointResponse.Message);
+  
+                await _eventPublisherService.PublishEventAsync(
+                    entityName: auditEvent.EntityName,
+                    operationType: auditEvent.OperationType,
+                    success: auditEvent.Success,
+                    performedBy: auditEvent.PerformedBy,
+                    reason: auditEvent.Reason,
+                    additionalData: errorEvent,
+                    exchangeName: PublicationExchangeNames.User.ToExchangeName(),
+                    routingKey: PublicationRoutingKeys.Update_Success.ToRoutingKey()
+                );
             }
             return _endpointResponse;
         }
-
         #endregion
     }
 }

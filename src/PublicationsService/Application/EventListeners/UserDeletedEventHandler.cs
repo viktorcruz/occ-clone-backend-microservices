@@ -1,5 +1,5 @@
-﻿using SharedKernel.Common.Events;
-using SharedKernel.Common.Interfaces;
+﻿using SharedKernel.Common.Interfaces.EventBus;
+using SharedKernel.Events.User;
 
 namespace PublicationsService.Application.EventListeners
 {

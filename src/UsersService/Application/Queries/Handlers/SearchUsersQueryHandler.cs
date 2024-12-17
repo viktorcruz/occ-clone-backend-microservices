@@ -1,10 +1,13 @@
 ﻿using MediatR;
-using SharedKernel.Common.Events;
-using SharedKernel.Common.Extensions;
-using SharedKernel.Common.Interfaces;
+using SharedKernel.Common.Interfaces.Logging;
 using SharedKernel.Common.Responses;
-using SharedKernel.Interface;
-using UsersService.Application.Dto;
+using SharedKernel.Events.Auth;
+using SharedKernel.Extensions.Event;
+using SharedKernel.Extensions.Http;
+using SharedKernel.Extensions.Routing;
+using SharedKernel.Interfaces.Exceptions;
+using SharedKernel.Interfaces.Response;
+using UsersService.Application.DTO;
 using UsersService.Domain.Interface;
 
 namespace UsersService.Application.Queries.Handlers
@@ -16,6 +19,7 @@ namespace UsersService.Application.Queries.Handlers
         private readonly IApplicationExceptionHandler _applicationExceptionHandler;
         private readonly IEndpointResponse<RetrieveDatabaseResult<List<SearchUsersDTO>>> _endpointResponse;
         private readonly IEventPublisherService _eventPublisherService;
+        private readonly IHttpContextAccessor _contextAccessor;
         #endregion
 
         #region Constructor
@@ -23,13 +27,15 @@ namespace UsersService.Application.Queries.Handlers
             IUserDomain userDomain,
             IApplicationExceptionHandler applicationExceptionHandler,
             IEndpointResponse<RetrieveDatabaseResult<List<SearchUsersDTO>>> endpointResponse,
-            IEventPublisherService eventPublisherService
+            IEventPublisherService eventPublisherService,
+            IHttpContextAccessor contextAccessor
             )
         {
             _userDomain = userDomain;
             _applicationExceptionHandler = applicationExceptionHandler;
             _endpointResponse = endpointResponse;
             _eventPublisherService = eventPublisherService;
+            _contextAccessor = contextAccessor;
         }
         #endregion
 
@@ -62,30 +68,14 @@ namespace UsersService.Application.Queries.Handlers
                     };
 
                     await _eventPublisherService.PublishEventAsync(
-                        entityName: "User",
-                        operationType: "SEARCH",
+                        entityName: AuditEntityType.User.ToEntityName(),
+                        operationType: AuditOperationType.Search.ToOperationType(),
                         success: true,
-                        performedBy: "Admin",
+                        performedBy: _contextAccessor.GtePerformedBy(),
                         reason: response?.ResultMessage ?? "User not found",
                         additionalData: additionalData,
                         exchangeName: PublicationExchangeNames.User.ToExchangeName(),
                         routingKey: PublicationRoutingKeys.Search_Success.ToRoutingKey()
-                        );
-                }
-                else
-                {
-                    _endpointResponse.IsSuccess = false;
-                    _endpointResponse.Message = "No users found";
-
-                    await _eventPublisherService.PublishEventAsync(
-                        entityName: "User",
-                        operationType: "SEARCH",
-                        success: false,
-                        performedBy: "Admin",
-                        reason: response?.ResultMessage ?? "Data not found",
-                        additionalData: response,
-                        exchangeName: PublicationExchangeNames.User.ToExchangeName(),
-                        routingKey: PublicationRoutingKeys.Search_Failed.ToRoutingKey()
                         );
                 }
             }
@@ -94,16 +84,18 @@ namespace UsersService.Application.Queries.Handlers
                 _applicationExceptionHandler.CaptureException<string>(ex, ApplicationLayer.Handler, ActionType.FetchAll);
                 _endpointResponse.IsSuccess = false;
                 _endpointResponse.Message = ex.Message;
+
                 var errorEvent = new RegisterErrorEvent
                 {
                     ErrorMessage = ex.Message,
                     StackTrace = ex.StackTrace
                 };
+
                 await _eventPublisherService.PublishEventAsync(
-                    entityName: "User",
-                    operationType: "SEARCH",
-                    success: true,
-                    performedBy: "Admin",
+                    entityName: AuditEntityType.User.ToEntityName(),
+                    operationType: AuditOperationType.Search.ToOperationType(),
+                    success: false,
+                    performedBy: _contextAccessor.GtePerformedBy(),
                     reason: ex.Message,
                     additionalData: errorEvent,
                     exchangeName: PublicationExchangeNames.User.ToExchangeName(),

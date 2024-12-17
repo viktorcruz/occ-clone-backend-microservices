@@ -1,9 +1,9 @@
 ﻿using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using SharedKernel.Interface;
+using SharedKernel.Interfaces.Exceptions;
 using UsersService.Application.Commands;
-using UsersService.Application.Dto;
+using UsersService.Application.DTO;
 using UsersService.Application.Queries;
 
 namespace UsersService.Controllers

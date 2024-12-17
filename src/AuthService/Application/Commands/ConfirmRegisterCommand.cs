@@ -1,12 +1,14 @@
-﻿namespace AuthService.Application.Commands
+﻿using AuthService.Application.DTO;
+
+namespace AuthService.Application.Commands
 {
     public class ConfirmRegisterCommand
     {
         public string Email { get; }
 
-        public ConfirmRegisterCommand(string email)
+        public ConfirmRegisterCommand(ConfirmRegistrationDTO confirmDTO)
         {
-            Email = email;
+            Email = confirmDTO.Email;
         }
     }
 }

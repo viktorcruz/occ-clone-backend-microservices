@@ -2,7 +2,7 @@
 using AuthService.Application.DTO;
 using AuthService.Application.Interfaces;
 using AuthService.Domain.Ports.Output;
-using SharedKernel.Interface;
+using SharedKernel.Interfaces.Exceptions;
 
 namespace AuthService.Application.UsesCases
 {

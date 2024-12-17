@@ -5,11 +5,18 @@ using SearchJobsService.Modules.Authentication;
 using SearchJobsService.Modules.Swagger;
 using FluentValidation.AspNetCore;
 using SearchJobsService.Application.Queries;
-using SharedKernel.Common.Events;
-using SharedKernel.Common.Interfaces;
-using SharedKernel.Common.Extensions;
-using SearchJobsService.Application.EventListeners;
-using PublicationsService.Application.EventListeners;
+using SharedKernel.Common.Interfaces.EventBus;
+using SharedKernel.Common.Messaging;
+using SearchJobsService.Application.EventListeners.User;
+using SearchJobsService.Application.EventListeners.Publication;
+using SearchJobsService.Application.EventListeners.Job;
+using NLog.Web;
+using NLog;
+using SharedKernel.Events.JobSearch;
+using SharedKernel.Events.Publication;
+using SharedKernel.Events.User;
+using SharedKernel.Extensions.Router;
+using SharedKernel.Extensions.Routing;
 
 var builder = WebApplication.CreateBuilder(args);
 var configurationManager = builder.Configuration;
@@ -35,12 +42,18 @@ builder.Services.AddCustomAuthentication(configurationManager);
 builder.Services.AddCustomSwagger();
 builder.Services.AddAuthorization();
 
-// Configuración de logging
+// Loggin configuration
 builder.Logging.ClearProviders();
+NLog.GlobalDiagnosticsContext.Set("Environment", "Development");
+NLog.GlobalDiagnosticsContext.Set("ServerName", Environment.MachineName);
+NLog.GlobalDiagnosticsContext.Set("IdCorrelation", Guid.NewGuid().ToString());
+NLog.GlobalDiagnosticsContext.Set("MicroserviceName", System.Reflection.Assembly.GetEntryAssembly()?.GetName().Name);
+//NLog.LogManager.Setup().LoadConfigurationFromFile("nlog.config").RegisterNLogWeb();
+builder.Host.UseNLog();
 builder.Logging.AddConsole();
-builder.Logging.SetMinimumLevel(LogLevel.Debug);
-builder.Logging.AddFilter("Microsoft.AspNetCore.Authentication", LogLevel.Trace);
-builder.Logging.AddFilter("Microsoft.AspNetCore", LogLevel.Debug);
+builder.Logging.SetMinimumLevel(Microsoft.Extensions.Logging.LogLevel.Debug);
+builder.Logging.AddFilter("Microsoft.AspNetCore.Authentication", Microsoft.Extensions.Logging.LogLevel.Trace);
+builder.Logging.AddFilter("Microsoft.AspNetCore", Microsoft.Extensions.Logging.LogLevel.Debug);
 
 builder.Services.AddEventRouter();
 
@@ -58,13 +71,23 @@ app.UseEventRouter()
         var eventRouter = context.RequestServices.GetRequiredService<EventRouter>();
 
         // manejadores de eventos especificos de este microservices
-        eventRouter.RegisterEventHandler<UserCreatedEvent>(PublicationExchangeNames.User.ToExchangeName(), PublicationRoutingKeys.Created.ToRoutingKey());
-        eventRouter.RegisterEventHandler<UserUpdatedEvent>(PublicationExchangeNames.User.ToExchangeName(), PublicationRoutingKeys.Updated.ToRoutingKey());
-        eventRouter.RegisterEventHandler<PublicationCreatedEvent>(PublicationExchangeNames.Publication.ToExchangeName(), PublicationRoutingKeys.Created.ToRoutingKey());
-        eventRouter.RegisterEventHandler<PublicationCreationFailedEvent>(PublicationExchangeNames.Publication.ToExchangeName(), PublicationRoutingKeys.Create_Failed.ToRoutingKey());
+        await eventRouter.RegisterEventHandlerAsync<UserCreatedEvent>(PublicationExchangeNames.User.ToExchangeName(), PublicationRoutingKeys.Created.ToRoutingKey());
+        await eventRouter.RegisterEventHandlerAsync<UserUpdatedEvent>(PublicationExchangeNames.User.ToExchangeName(), PublicationRoutingKeys.Updated.ToRoutingKey());
+        await eventRouter.RegisterEventHandlerAsync<PublicationCreatedEvent>(PublicationExchangeNames.Publication.ToExchangeName(), PublicationRoutingKeys.Created.ToRoutingKey());
+        await eventRouter.RegisterEventHandlerAsync<PublicationCreationFailedEvent>(PublicationExchangeNames.Publication.ToExchangeName(), PublicationRoutingKeys.Create_Failed.ToRoutingKey());
         // eventos de saga y otros eventos especificos
-        eventRouter.RegisterEventHandler<JobSearchApplyEvent>(PublicationExchangeNames.Job.ToExchangeName(), PublicationRoutingKeys.Apply.ToRoutingKey());
-
+        await eventRouter.RegisterEventHandlerAsync<JobApplicationFailedEvent>(
+             PublicationExchangeNames.Job.ToExchangeName(),
+             PublicationRoutingKeys.Apply_Success.ToRoutingKey()
+         );
+        await eventRouter.RegisterEventHandlerAsync<JobApplicationFailedEvent>(
+             PublicationExchangeNames.Job.ToExchangeName(),
+             PublicationRoutingKeys.Apply_Error.ToRoutingKey()
+         );
+        await eventRouter.RegisterEventHandlerAsync<JobApplicationFailedEvent>(
+             PublicationExchangeNames.Job.ToExchangeName(),
+             PublicationRoutingKeys.Apply_Failed.ToRoutingKey()
+         );
         await next.Invoke();
     });
 

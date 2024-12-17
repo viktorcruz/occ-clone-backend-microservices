@@ -1,4 +1,5 @@
 ﻿using AuthService.Application.DTO;
+using System.ComponentModel.DataAnnotations;
 
 namespace AuthService.Application.Commands
 {
@@ -6,6 +7,8 @@ namespace AuthService.Application.Commands
     {
         #region Properties
         public string AccessToken { get; set; }
+
+        [Required]
         public string RefreshToken { get; set; }
         #endregion
 

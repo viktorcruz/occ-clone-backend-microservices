@@ -10,6 +10,7 @@
     <PackageReference Include="BouncyCastle.Cryptography" Version="2.4.0" />
     <PackageReference Include="Dapper" Version="2.1.35" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.10" />
+    <PackageReference Include="NLog.Database" Version="5.3.4" />
     <PackageReference Include="NLog.Extensions.Logging" Version="5.3.14" />
     <PackageReference Include="NLog.Web" Version="5.3.14" />
     <PackageReference Include="NLog.Web.AspNetCore" Version="5.3.14" />
@@ -28,6 +29,7 @@
 
   <ItemGroup>
     <Folder Include="Domain\Ports\Input\" />
+    <Folder Include="Infrastructure\Services\Interfaces\" />
   </ItemGroup>
 
   <ItemGroup>

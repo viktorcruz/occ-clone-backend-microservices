@@ -72,19 +72,28 @@ IF EXISTS(SELECT 1 FROM SYS.OBJECTS WHERE OBJECT_ID = OBJECT_ID(N'[dbo].[Users]'
 BEGIN
 	DROP TABLE [dbo].[Users]
 END
-IF EXISTS(SELECT 1 FROM SYS.OBJECTS WHERE OBJECT_ID = OBJECT_ID(N'[dbo].[EventLogs]'))
+IF EXISTS(SELECT 1 FROM SYS.OBJECTS WHERE OBJECT_ID = OBJECT_ID(N'[dbo].[IntegrationEvents]'))
 BEGIN
-	DROP TABLE [dbo].[EventLogs] 
+	DROP TABLE [dbo].[IntegrationEvents] 
 END
 IF EXISTS(SELECT 1 FROM SYS.OBJECTS WHERE OBJECT_ID = OBJECT_ID(N'[dbo].[JobApplications]'))
 BEGIN
 	DROP TABLE [dbo].[JobApplications]
 END
 GO
-IF EXISTS(SELECT 1 FROM SYS.OBJECTS WHERE OBJECT_ID = OBJECT_ID(N'[dbo].[AppLogs]'))
+IF EXISTS(SELECT 1 FROM SYS.OBJECTS WHERE OBJECT_ID = OBJECT_ID(N'[dbo].[EventDetailsLogs]'))
 BEGIN 
-	DROP TABLE [dbo].[AppLogs]
+	DROP TABLE [dbo].[EventDetailsLogs]
 END
+GO
+IF EXISTS(SELECT 1 FROM SYS.OBJECTS WHERE OBJECT_ID = OBJECT_ID(N'[dbo].[ErrorDetailsLogs]'))
+BEGIN 
+	DROP TABLE [dbo].[ErrorDetailsLogs]
+END
+IF EXISTS(SELECT 1 FROM SYS.OBJECTS WHERE OBJECT_ID = OBJECT_ID(N'[dbo].[ApplicationLogs]'))
+BEGIN 
+	DROP TABLE [dbo].[ApplicationLogs]
+END 
 GO
 
 CREATE TABLE Roles
@@ -185,7 +194,8 @@ CREATE TABLE JobApplications
 	ApplicantResume NVARCHAR(MAX) NULL,
 	CoverLetter NVARCHAR(MAX) NULL,
 	ApplicationDate DATETIME NOT NULL DEFAULT GETDATE(),
-	Status NVARCHAR(20) NOT NULL DEFAULT 'Applied'
+	Status INT NULL DEFAULT 0,
+	StatusMessage NVARCHAR(20) NOT NULL DEFAULT 'WithoutApplying'
 )
 
 ALTER TABLE [JobApplications]
@@ -216,47 +226,49 @@ ALTER TABLE SearchJobs
 	FOREIGN KEY([IdUser]) REFERENCES Users([IdUser])
 
 
-CREATE TABLE EventLogs (
-    Id INT IDENTITY(1,1) PRIMARY KEY CLUSTERED,
-    EventName NVARCHAR(100) NOT NULL,
+CREATE TABLE IntegrationEvents (--;IntegrationEvents (
+    IdEvent INT IDENTITY(1,1) PRIMARY KEY CLUSTERED,
+	IdCorrelation NVARCHAR(255),
+    EventType NVARCHAR(100) NOT NULL,
     EventData NVARCHAR(MAX) NOT NULL,
     Exchange NVARCHAR(100) NOT NULL,
     RoutingKey NVARCHAR(100) NOT NULL,
     CreatedAt DATETIME NOT NULL DEFAULT GETDATE()
 );
 
-CREATE TABLE [dbo].[AppLogs] (
-    Id INT IDENTITY(1,1) PRIMARY KEY,
-	Environment NVARCHAR(255),
-	IdCorrelation NVARCHAR(255),
-	Method NVARCHAR(255),
-    CallSite NVARCHAR(MAX),
-    Date DATETIME,
-    Exception NVARCHAR(MAX),
-    Level NVARCHAR(50),
-    Logger NVARCHAR(255),
-    MachineName NVARCHAR(255),
+CREATE TABLE ApplicationLogs (--;[dbo].[ApplicationLogs] (
+    IdLog INT IDENTITY(1,1) PRIMARY KEY,
+    IdCorrelation NVARCHAR(255) NOT NULL, --UNIQUE, -- Identificador único para relacionar
+	MicroserviceName NVARCHAR(100),
+    Environment NVARCHAR(255),
+    LogDate DATETIME NOT NULL DEFAULT GETDATE(),
+    ExceptionMessage  NVARCHAR(MAX),
+    LogLevel NVARCHAR(50),
+    LoggerName NVARCHAR(255),
     Message NVARCHAR(MAX),
-    StackTrace NVARCHAR(MAX),
-    Thread NVARCHAR(50),
-    Username NVARCHAR(255)
+    ExceptionStackTrace NVARCHAR(MAX),
+    ThreadId NVARCHAR(50)
+);
+CREATE TABLE EventDetailsLogs (--;[dbo].[EventDetailsLogs] (
+    IdDetailLog INT IDENTITY(1,1) PRIMARY KEY,
+    IdCorrelation NVARCHAR(255) NOT NULL, -- Relación con ApplicationLogs
+    MethodName NVARCHAR(255),
+    CallSite NVARCHAR(MAX),
+    MachineName NVARCHAR(255),
+    Username NVARCHAR(255),
+    --FOREIGN KEY (IdCorrelation) REFERENCES ApplicationLogs (IdCorrelation) ON DELETE CASCADE
+);
+CREATE TABLE ErrorDetailsLogs (--;[dbo].[ErrorDetailsLogs] (
+    IdErrorLog INT IDENTITY(1,1) PRIMARY KEY,
+    IdCorrelation NVARCHAR(255) NOT NULL, -- Relación con ApplicationLogs
+    ServerName NVARCHAR(255),
+    LineNumber INT,
+    FileName NVARCHAR(255),
+    LogDate DATETIME NOT NULL DEFAULT GETDATE(),
+    --FOREIGN KEY (IdCorrelation) REFERENCES ApplicationLogs (IdCorrelation) ON DELETE CASCADE
 );
 
 
-/******
-
-ALTER PROCEDURE [dbo].[Usp_EventLog_Add]
-    @EventName NVARCHAR(100),
-    @EventData NVARCHAR(MAX),
-    @Exchange NVARCHAR(100),
-    @RoutingKey NVARCHAR(100)
-AS
-BEGIN
-    INSERT INTO EventLogs(EventName, EventData, Exchange, RoutingKey, CreatedAt)
-    VALUES(@EventName, @EventData, @Exchange, @RoutingKey, GETDATE())
-END
-
-*******/
 
 INSERT INTO JobTypes (JobTypeName) VALUES
 	('Backend Developer'),
@@ -280,18 +292,28 @@ INSERT INTO JobTypes (JobTypeName) VALUES
 	('Technical Support Specialist');
 
 INSERT INTO Roles(RoleName) 
-VALUES('Recruiter'),('Applicant');
+VALUES ('Admin'),('Recruiter'),('Applicant');
 
 --; passHash nUrT/5WpKOi/inSmWr9jgtjItwEYp8gDgwgEXtVy2JokVbhxTT5vDVxYCmbRNj8H
 --; pass 12341234
 INSERT INTO Users(IdRole, FirstName, LastName, Email, PasswordHash, CreationDate, IsActive, IsRegistrationConfirmed, RegistrationConfirmedAt)
-VALUES	(1,'Alice','Liddel','alice@fake.com','nUrT/5WpKOi/inSmWr9jgtjItwEYp8gDgwgEXtVy2JokVbhxTT5vDVxYCmbRNj8H',GETDATE(),0,0, NULL),	--; recruiter
-		(2,'Jon','Snow','jon@fake.com','EzkhpOq+qxqGMaVyzCj+EbWANkMKXoKmnm4xFNnjXPT0LO6iLpHexCYqjymv6JG9',GETDATE(),0,0, NULL);	--; applicant
+VALUES	(2,'Dutch','S','dutch@fake.com','4PWcJWpd1B+U2JDnLwetZRLWuianGLodczIwjS04j6dKejHpE5N6A3ieZ9+t8D5c',GETDATE(),0,0, NULL),	--; recruiter
+		(2,'Sigrid','S','sigrid@fake.com','ywa5iLldCBHMLlHViA7xILjoQ9dYSnCtIZy4fTfmKm10xKsDMfWV1LbiTH0u64rX',GETDATE(),0,0, NULL),	--; recruiter
+		(2,'Helga','S','helga@fake.com','wh57hxfW7wjSONdacX2YZRxyV/P4YDVGeTnmTjtUiBYr9y3Zu6SBbOMhbg9pnV+2',GETDATE(),0,0, NULL),	--; recruiter
+		(3,'Tula','S','tula@fake.com','fvMPuTmT1Km0HYCcrusrOIg/UEqx9xIYIFO2FLbdH23CQYWB6jQY1ZDESA/juk0s',GETDATE(),0,0, NULL),	--; applicant
+		(3,'Thor','S','thor@fake.com','k+s9AOLmbP3GWCfxO0h3tUgENJppbKk5V7NHnkuwVhSTovffajcKSmgdL6l56J75',GETDATE(),0,0, NULL),	--; applicant
+		(3,'Loki','S','loki@fake.com','qzC8RXaRuR97qAEqaAeTyQMDS2cdmDoPj+cg1mjlJG2MQZIVzbw8Elm4FWYj8QrO',GETDATE(),0,0, NULL);	--; applicant
 
 INSERT INTO Publications( IdUser, IdRole, Title, Description, PublicationDate, ExpirationDate, Status, Salary, Location, Company, IdJobType)
-VALUES(1,1, 'Backend Developer Position', 'Looking ofr an experienced Backend Developer with knowledge of .NET', GETDATE(), DATEADD(MONTH, 1, GETDATE()), 1, 21000.00, 'Mexico City', 'OCP',1),
-	(1,1, 'Frontend Developer Position', 'Seeking a skilled Frontend Developer with experience in Angular and TypeScript', GETDATE(), DATEADD(MONTH, 1, GETDATE()), 1, 70000.00, 'San Francisco', 'OCP',2),
-	(1,1, 'Data Scientist Role', 'Hiring a Data Scientist with knowledge of Python and Machine Learning', GETDATE(), DATEADD(MONTH, 1, GETDATE()), 1, 23500.00, 'Mexico City', 'OCP', 3)
+VALUES(1,2, 'Backend Developer Position', 'Looking ofr an experienced Backend Developer with knowledge of .NET', GETDATE(), DATEADD(MONTH, 1, GETDATE()), 1, 21000.00, 'Mexico City', 'OCP',1),
+	(1,2, 'Frontend Developer Position', 'Seeking a skilled Frontend Developer with experience in Angular and TypeScript', GETDATE(), DATEADD(MONTH, 1, GETDATE()), 1, 70000.00, 'San Francisco', 'OCP',2),
+	(1,2, 'Full Stack Developer (.NET & C#)', 'Hybrid  Full-time  Associate', GETDATE(), DATEADD(MONTH, 1, GETDATE()), 1, 18500.00, 'Mexico City', 'OCP', 3),
+	(1,2, 'Software Engineer II', 'Remote  Full-time', GETDATE(), DATEADD(MONTH, 1, GETDATE()), 1, 21100.00, 'Mexico City', 'OCP', 1),
+	(1,2, 'Deployment Engineer', 'On-site  Contract  Mid-Senior level', GETDATE(), DATEADD(MONTH, 1, GETDATE()), 1, 6500.00, 'Mexico City', 'OCP', 1),
+	(1,2, 'Java Developer (Angular) ', 'Remote  Full-time  Mid-Senior level', GETDATE(), DATEADD(MONTH, 1, GETDATE()), 1, 9500.00, 'Mexico City', 'OCP', 3),
+	(1,2, 'Data Quality Assurance Engineer', 'Remote  Full-time  Mid-Senior level', GETDATE(), DATEADD(MONTH, 1, GETDATE()), 1, 8500.00, 'Mexico City', 'OCP', 8),
+	(1,2, 'DevOps Engineer', 'Remote  Full-time  Mid-Senior level', GETDATE(), DATEADD(MONTH, 1, GETDATE()), 1, 2500.00, 'Mexico City', 'OCP', 5),
+	(1,2, 'Full Stack Engineer -.NET ** React *Remote', 'Remote  Full-time  Mid-Senior level', GETDATE(), DATEADD(MONTH, 1, GETDATE()), 1, 13500.00, 'Mexico City', 'OCP', 3)
 
 /**
 DECLARE @MinSalary DECIMAL = 10000
@@ -316,7 +338,4 @@ VALUES(1, 2, 'Applied', GETDATE());
 
 INSERT INTO SearchJobs(IdUser, IdJobType, SearchQuery, SearchDate, Location, MinSalary, MaxSalary)
 VALUES(2, 1, 'Backend', GETDATE(), 'Mexico City', 10000, 30000);
-
---select IdUser, email, IsActive, IsRegistrationConfirmed from users
-
 

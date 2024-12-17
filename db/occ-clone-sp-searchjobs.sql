@@ -21,6 +21,11 @@ BEGIN
 	DROP PROCEDURE [dbo].[Usp_JobApplications_Search]
 END
 GO
+IF OBJECT_ID('[dbo].[Usp_HasApplication_Get]', 'P') IS NOT NULL
+BEGIN
+	DROP PROCEDURE [dbo].[Usp_HasApplication_Get]
+END
+GO
 
 /** INSERT **/
 CREATE OR ALTER PROCEDURE
@@ -31,7 +36,8 @@ CREATE OR ALTER PROCEDURE
 		@ApplicantResume NVARCHAR(MAX),
 		@CoverLetter NVARCHAR(MAX),
 		@ApplicationDate DATETIME,
-		@Status NVARCHAR(20)
+		@Status INT,
+		@StatusMessage NVARCHAR(20)
 AS
 BEGIN
 	SET NOCOUNT ON;
@@ -47,17 +53,26 @@ BEGIN
 	
 	BEGIN TRY
 		BEGIN TRANSACTION
+			IF((SELECT Status FROM JobApplications WHERE IdPublication = @IdPublication AND IdApplicant = @IdApplicant) = 'applied')
+			BEGIN
+				INSERT INTO @Result(ResultStatus, ResultMessage, OperationType, AffectedRecordId, OperationDateTime)
+				VALUES (0, 'Error: Applicant already exists', 'INSERT', NULL, GETDATE())
 
-			INSERT INTO [dbo].[JobApplications](IdPublication, IdApplicant, ApplicantName, ApplicantResume, CoverLetter, Status)
-			VALUES(@IdPublication, @IdApplicant, @ApplicantName, @ApplicantResume, @CoverLetter, @Status)
+				ROLLBACK TRANSACTION
+				SELECT * FROM @Result
+				RETURN;
+			END
+			ELSE BEGIN
+				INSERT INTO [dbo].[JobApplications](IdPublication, IdApplicant, ApplicantName, ApplicantResume, CoverLetter, Status, StatusMessage)
+				VALUES(@IdPublication, @IdApplicant, @ApplicantName, @ApplicantResume, @CoverLetter, @Status, @StatusMessage)
 			
-			DECLARE @LastId INT = (SELECT SCOPE_IDENTITY())
+				DECLARE @LastId INT = (SELECT SCOPE_IDENTITY())
 			
-			INSERT INTO @Result(ResultStatus, ResultMessage, OperationType, AffectedRecordId, OperationDateTime)
-			VALUES(1, 'Data has been successfuly inserted', 'INSERT', @LastId, GETDATE())
+				INSERT INTO @Result(ResultStatus, ResultMessage, OperationType, AffectedRecordId, OperationDateTime)
+				VALUES(1, 'Data has been successfuly inserted', 'INSERT', @LastId, GETDATE())
 			
-			COMMIT TRANSACTION
-
+				COMMIT TRANSACTION
+			END
 	END TRY
 	
 	BEGIN CATCH
@@ -76,7 +91,53 @@ BEGIN
 END
 GO
 
-CREATE OR ALTER   PROCEDURE
+
+CREATE OR ALTER PROCEDURE
+	[dbo].[Usp_HasApplication_Get]
+		@IdApplicant INT,
+		@IdPublication INT
+AS
+BEGIN
+	SET NOCOUNT ON;
+	DECLARE @ErrorMessage NVARCHAR(4000)
+	DECLARE @Result AS TABLE
+	(
+		ResultStatus BIT, 
+		ResultMessage NVARCHAR(100),
+		OperationType NVARCHAR(20),
+		AffectedRecordId INT,
+		OperationDate DATETIME,
+		IdApplication INT,
+		idPublication INT, 
+		IdApplicant INT,
+		Status NVARCHAR(20)
+	)
+
+	BEGIN TRY
+		IF EXISTS(SELECT 1 FROM JobApplications WHERE IdApplicant = @IdApplicant AND IdPublication = @IdPublication) 
+		BEGIN
+			INSERT INTO @Result(ResultStatus, ResultMessage, OperationType, AffectedRecordId, OperationDate, IdApplication, IdPublication, IdApplicant, Status)
+			SELECT 1, 'Application found', 'GET', 0, GETDATE(), IdApplication, IdPublication, IdApplicant, Status
+			FROM JobApplications (NOLOCK)
+			WHERE IdApplicant = @IdApplicant AND IdPublication = @IdPublication
+		END
+		ELSE BEGIN
+			INSERT INTO @Result(ResultStatus, ResultMessage, OperationType, AffectedRecordId, OperationDate, IdApplication, IdPublication, IdApplicant, Status)
+			VALUES(0, 'Error: Application not found', 'GET', 0, GETDATE(), NULL, NULL, NULL, NULL)
+		END
+	END TRY
+	BEGIN CATCH
+		SET @ErrorMessage = ERROR_MESSAGE()
+		INSERT INTO @Result(ResultStatus, ResultMessage, OperationType, AffectedRecordId, OperationDate, IdApplication, IdPublication, IdApplicant, Status)
+		VALUES(0, @ErrorMessage, 'GET', 0, GETDATE(), NULL, NULL, NULL, NULL)
+	END CATCH
+
+	SET NOCOUNT OFF;
+	SELECT * FROM @Result
+END
+GO
+
+CREATE OR ALTER PROCEDURE
 	[dbo].[Usp_JobApplications_GetAll]
 		@IdApplicant INT
 AS

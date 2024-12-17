@@ -1,5 +1,7 @@
 ﻿using SearchJobsService.Application.Commands;
-using SearchJobsService.Application.Dto;
+using SearchJobsService.Application.DTO;
+using SearchJobsService.Application.DTO.Commands;
+using SearchJobsService.Application.DTO.Queries;
 using SearchJobsService.Domain.Interface;
 using SearchJobsService.Infrastructure.Interface;
 using SharedKernel.Common.Responses;
@@ -38,6 +40,10 @@ namespace SearchJobsService.Domain.Core
         public async Task<RetrieveDatabaseResult<List<UserApplicationsResponseDTO>>> ApplicationsAsync(int userId)
         {
             return await _searchJobsRepository.ApplicationsAsync(userId);
+        }
+        public async Task<DatabaseResult> HasApplicationAsync(int userId, int applicationId)
+        {
+            return await _searchJobsRepository.HasApplicationAsync(userId, applicationId);
         }
         #endregion
     }

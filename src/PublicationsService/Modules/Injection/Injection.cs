@@ -1,68 +1,35 @@
 ﻿using FluentValidation;
 using PublicationsService.Application.Commands.Validators;
 using PublicationsService.Domain.Core;
-using PublicationsService.Domain.Events;
 using PublicationsService.Domain.Interface;
 using PublicationsService.Infrastructure.Interface;
 using PublicationsService.Infrastructure.Repository;
-using SharedKernel.Common;
-using SharedKernel.Common.Exceptions;
-using SharedKernel.Common.Interfaces;
 using SharedKernel.Common.Repositories;
 using SharedKernel.Common.Response;
 using SharedKernel.Common.Responses;
-using SharedKernel.Interface;
 using SharedKernel.Data;
-using SharedKernel.Common.Events;
 using PublicationsService.Application.EventListeners;
 using SharedKernel.Common.Messaging;
-using PublicationsService.Domain.Services;
+using SharedKernel.Audit;
+using SharedKernel.Common.Interfaces.EventBus;
+using SharedKernel.Common.Interfaces.Logging;
+using SharedKernel.Common.Interfaces.Persistence;
+using SharedKernel.Services;
+using SharedKernel.Dapper;
+using SharedKernel.Events.Publication;
+using SharedKernel.Events.User;
+using SharedKernel.Exceptions.Application;
+using SharedKernel.Interfaces.Exceptions;
+using SharedKernel.Interfaces.Response;
+using SharedKernel.Interfaces.Service;
+using SharedKernel.Interfaces.Audit;
+using SharedKernel.Interfaces.Dapper;
+using PublicationsService.Saga;
 
 namespace PublicationsService.Modules.Injection
 {
     public static class Injection
     {
-        //public static IServiceCollection AddCustomInjections(this IServiceCollection services, IConfiguration configuration)
-        //{
-        //    //services.AddSingleton<RabbitMQConnection>();
-        //    //services.AddSingleton<RabbitMQEventBus>();
-        //    //services.AddSingleton<IEventBus, RabbitMQEventBus>();
-
-
-        //    services.AddTransient<EntityOperationEvent>();
-        //    services.AddTransient<IEntityOperationEventFactory, EntityOperationEventFactory>();
-        //    services.AddSingleton<IDapperExecutor, DapperExecutor>();
-        //    services.AddSingleton<IEventLogRepository, EventLogRepository>();
-        //    services.AddTransient<IPublicationDomain, PublicationDomain>();
-        //    services.AddTransient<IPublicationRepository, PublicationRepository>();
-        //    //services.AddTransient<ISearchJobsRepository, SearchJobsRepository>();
-        //    services.AddSingleton<ISqlServerConnectionFactory, SqlServerConnectionFactory>();
-        //    services.AddSingleton<IGlobalExceptionHandler, GlobalExceptionHandler>();
-        //    services.AddTransient(typeof(IEndpointResponse<>), typeof(EndpointResponse<>));
-        //    services.AddTransient<IDatabaseResult, DatabaseResult>();
-
-        //    services.AddValidatorsFromAssemblyContaining<CreatePublicationCommandValidator>();
-
-
-
-        //    // Registro de handlers específicos de PublicationsService
-        //    services.AddScoped<IEventHandler<UserCreatedEvent>, UserCreatedEventHandler>();
-
-        //    var serviceProvider = services.BuildServiceProvider();
-        //    var eventBus = serviceProvider.GetRequiredService<IEventBus>();
-
-        //    // Crear y configurar el EventRouter para este microservicio
-        //    var eventRouter = new EventRouter(serviceProvider, eventBus);
-
-        //    // Registrar solo los eventos que necesita PublicationsService
-        //    // Registrar eventos en el EventRouter
-        //    eventRouter.RegisterEventHandler<UserCreatedEvent>("user_exchange", "user.created");
-        //    eventRouter.RegisterEventHandler<UserDeletedEvent>("user_exchange", "user.deleted");
-
-
-        //    return services;
-        //}
-
         public static IServiceCollection AddCustomInjection(this IServiceCollection services, IConfiguration configuration)
         {
             services.AddRabbitMQ(configuration);
@@ -76,8 +43,9 @@ namespace PublicationsService.Modules.Injection
 
         public static IServiceCollection AddRabbitMQ(this IServiceCollection services, IConfiguration configuration)
         {
+            services.AddSingleton<RabbitMQSettings>();
             services.AddSingleton<RabbitMQConnection>();
-            services.AddSingleton<IEventBus, RabbitMQEventBus>();
+            services.AddSingleton<IAsyncEventBus, RabbitMQEventBus>();
             services.AddSingleton<EventRouter>();
 
             return services;
@@ -86,7 +54,7 @@ namespace PublicationsService.Modules.Injection
         public static IServiceCollection AddDomainServices(this IServiceCollection services)
         {
             services.AddTransient<IPublicationDomain, PublicationDomain>();
-            services.AddTransient<IEntityOperationEventFactory, EntityOperationEventFactory>();
+            services.AddTransient<IAuditEventFactory, AuditEventFactory>();
             services.AddTransient<IEventPublisherService, EventPublisherService>();
 
             return services;
@@ -94,7 +62,7 @@ namespace PublicationsService.Modules.Injection
 
         public static IServiceCollection AddRepositories(this IServiceCollection services)
         {
-            services.AddSingleton<IEventLogRepository, EventLogRepository>();
+            services.AddSingleton<IEventLogStorage, EventLogStorage>();
             services.AddTransient<IPublicationRepository, PublicationRepository>();
 
             return services;
@@ -114,6 +82,7 @@ namespace PublicationsService.Modules.Injection
 
         public static IServiceCollection AddCommonServices(this IServiceCollection services)
         {
+            services.AddSingleton<ICorrelationService, CorrelationService>();
             services.AddSingleton<ISqlServerConnectionFactory, SqlServerConnectionFactory>();
             services.AddSingleton<IApplicationExceptionHandler, ApplicationExceptionHandler>();
             services.AddTransient(typeof(IEndpointResponse<>), typeof(EndpointResponse<>));
@@ -121,6 +90,8 @@ namespace PublicationsService.Modules.Injection
             services.AddValidatorsFromAssemblyContaining<CreatePublicationCommandValidator>();
             services.AddSingleton<IDapperExecutor, DapperExecutor>();
             services.AddLogging();
+            services.AddHttpContextAccessor();
+            services.AddScoped<SagaOrchestrator>();
 
             return services;
         }

@@ -1,27 +1,27 @@
-﻿using SharedKernel.Common.Events;
-using SharedKernel.Common.Extensions;
-using SharedKernel.Common.Interfaces;
-using UsersService.Infrastructure.Interface;
+﻿using SharedKernel.Common.Interfaces.EventBus;
+using SharedKernel.Common.Interfaces.Logging;
+using SharedKernel.Events.Auth;
+using SharedKernel.Events.Publication;
+using SharedKernel.Extensions.Routing;
+using UsersService.Saga.Interfaces;
 
 namespace UsersService.Saga
 {
-    public class UserSagaHandler : IEventHandler<RegisterSuccessEvent>, IEventHandler<RegisterErrorEvent>
+    public class UserSagaHandler : IUserSagaHandler, IEventHandler<RegisterSuccessEvent>, IEventHandler<RegisterErrorEvent>
     {
-        private readonly IUserRepository _userRepository;
         private readonly IEventPublisherService _eventPublisherService;
-        private readonly UserSagaContext _sagaState;
-        private readonly CompensationActions _compensationActions;
+        private readonly IUserSagaContext _sagaState;
+        private readonly ICompensationActions _compensationActions;
 
         public UserSagaHandler(
-            IUserRepository userRepository,
             IEventPublisherService eventPublisherService,
-            CompensationActions compensationActions
+            IUserSagaContext userSagaContext,
+            ICompensationActions compensationActions
         )
         {
-            _userRepository = userRepository;
             _eventPublisherService = eventPublisherService;
             _compensationActions = compensationActions;
-            _sagaState = new UserSagaContext();
+            _sagaState = userSagaContext;
         }
 
         public async Task Handle(RegisterSuccessEvent registerEvent)
@@ -47,84 +47,18 @@ namespace UsersService.Saga
                     };
 
                     await _eventPublisherService.PublishEventAsync(
-                        entityName: "",
-                        operationType: "",
+                        entityName: "User",
+                        operationType: "SAGA",
                         success: true,
-                        performedBy: "Admin",
-                        reason: "",
-                        additionalData: null,
+                        performedBy: "SYSTEM",
+                        reason: string.Empty,
+                        additionalData: publicatoinCreatedEvent,
                         exchangeName: PublicationExchangeNames.Publication.ToExchangeName(),
                         routingKey: PublicationRoutingKeys.Created.ToRoutingKey()
                         );
 
                     _sagaState.TransitionToState(SagaState.UserCreated);
-                    //var publicationId = await _publicationServcie.CreatePublicationAsync(publicationDto);
-                    //if(publicationId > 0)
-                    //{
-                    //    _sagaState.MarkPublicationCreated(publicationId);
-                    //}
-                    //else
-                    //{
-                    //    throw new Exception("Publication creation failed");
-                    //}
-                    //var dto = new Application.Dto.AddUserDTO
-                    //{
-                    //    IdRole = command.IdRole,
-                    //    FirstName = command.FirstName,
-                    //    LastName = command.LastName,
-                    //    Email = command.Email,
-                    //};
-                    //var result = await _userRepository.CreateUserAsync(dto);
-
-                    //if (result != null && result.ResultStatus)
-                    //{
-                    //    _sagaState.MarkUserCreated(result.AffectedRecordId);
-                    //}
-                    //else
-                    //{
-                    //    throw new Exception("User creation failed");
-                    //}
                 }
-
-                //if (_sagaState.CurrentState == SagaState.PublicationCreated)
-                //{
-                //    // Paso 3: actualizar el indice de busqueda en searchJobsService
-                //    //var publicationDto = new Application.Dto.PublicationDTO
-                //    //{
-                //    //    IdUser = _sagaState.IdUser,
-                //    //    Title = command.Title,
-                //    //    Description = command.Description,
-                //    //    ExpirationDate = command.ExpirationDate,
-                //    //    Status = command.Status,
-                //    //    Salary = command.Salary,
-                //    //    Location = command.Location,
-                //    //    Company = command.Company
-                //    //};
-
-                //    var updateResult = await _searchJobsService.UpdateJobSearchAsync(_sagaState.IdUser, _sagaState.IdPublication);
-                //    if (updateResult)
-                //    {
-                //        _sagaState.MarkJobSearchUpdated();
-                //    }
-                //    else
-                //    {
-                //        throw new Exception("Job search update failed");
-                //    }
-                //}
-
-                //if (_sagaState.CurrentState == SagaState.PublicationCreated)
-                //{
-                //    // Paso 3: Actualizar el índice de búsqueda en SearchJobsService
-                //    var updateResult = await _searchJobsService.UpdateJobSearchAsync(_sagaState.IdUser, _sagaState.IdPublication);
-                //    if (updateResult)
-                //    {
-                //        _sagaState.MarkJobSearchUpdated();
-                //    }
-                //    else
-                //    {
-                //        throw new Exception("Job search update failed");
-                //    }
-                //}
 
                 // Completar la saga si todos los pasos fueron exitosos
                 _sagaState.CompleteSaga();
@@ -139,12 +73,12 @@ namespace UsersService.Saga
                     ErrorMessage = ex.Message,
                 };
                 await _eventPublisherService.PublishEventAsync(
-                    entityName: "",
-                    operationType: "",
+                    entityName: "User",
+                    operationType: "SAGA",
                     success: false,
-                    performedBy: "Admin",
-                    reason: "",
-                    additionalData: null,
+                    performedBy: "SYSTEM",
+                    reason: ex.Message,
+                    additionalData: errorEvent,
                     exchangeName: PublicationExchangeNames.User.ToExchangeName(),
                     routingKey: PublicationRoutingKeys.Register_Error.ToRoutingKey()
                     );

@@ -5,11 +5,12 @@ using UsersService.Modules.Injection;
 using UsersService.Modules.Mapper;
 using UsersService.Modules.Swagger;
 using UsersService.Modules.Authentication;
-using SharedKernel.Common.Interfaces;
-using SharedKernel.Common.Events;
-using SharedKernel.Common.Extensions;
-using UsersService.Application.EventListeners;
 using NLog.Web;
+using SharedKernel.Common.Messaging;
+using SharedKernel.Events.JobSearch;
+using SharedKernel.Events.User;
+using SharedKernel.Extensions.Router;
+using SharedKernel.Extensions.Routing;
 
 var builder = WebApplication.CreateBuilder(args);
 var configurationManager = builder.Configuration;
@@ -37,35 +38,55 @@ builder.Services.AddCustomSwagger();
 
 // Loggin configuration
 builder.Logging.ClearProviders();
+NLog.GlobalDiagnosticsContext.Set("Environment", "Development");
+NLog.GlobalDiagnosticsContext.Set("ServerName", Environment.MachineName);
+NLog.GlobalDiagnosticsContext.Set("IdCorrelation", Guid.NewGuid().ToString());
+NLog.GlobalDiagnosticsContext.Set("MicroserviceName", System.Reflection.Assembly.GetEntryAssembly()?.GetName().Name);
+
 builder.Host.UseNLog();
 builder.Logging.AddConsole();
 builder.Logging.SetMinimumLevel(Microsoft.Extensions.Logging.LogLevel.Debug);
 builder.Logging.AddFilter("Microsoft.AspNetCore.Authentication", Microsoft.Extensions.Logging.LogLevel.Trace);
 builder.Logging.AddFilter("Microsoft.AspNetCore", Microsoft.Extensions.Logging.LogLevel.Debug);
 
-//builder.Services.AddEventBus();
 builder.Services.AddEventRouter();
 
-// Registrar manejadores de eventos específicos
-builder.Services.AddScoped<IEventHandler<JobSearchApplyEvent>, SearchJobsApplyEventHandler>();
-builder.Services.AddScoped<IEventHandler<UserCreatedEvent>, UserCreatedEventHandler>();
-builder.Services.AddScoped<IEventHandler<UserUpdatedEvent>, UserUpdatedEventHandler>();
-builder.Services.AddScoped<IEventHandler<PublicationCreatedEvent>, PublicationCreatedEventHandler>();
+
 
 var app = builder.Build();
 
-app.UseEventRouter()
-    .Use(async (context, next) =>
-    {
-        var eventRouter = context.RequestServices.GetRequiredService<EventRouter>();
+//app.UseEventRouter()
+//    .Use(async (context, next) =>
+//    {
+//        var eventRouter = context.RequestServices.GetRequiredService<EventRouter>();
 
-        eventRouter.RegisterEventHandler<JobSearchApplyEvent>(PublicationExchangeNames.Job.ToExchangeName(), PublicationRoutingKeys.Apply.ToRoutingKey());
-        eventRouter.RegisterEventHandler<UserCreatedEvent>(PublicationExchangeNames.User.ToExchangeName(), PublicationRoutingKeys.Created.ToRoutingKey());
-        eventRouter.RegisterEventHandler<UserUpdatedEvent>(PublicationExchangeNames.User.ToExchangeName(), PublicationRoutingKeys.Updated.ToRoutingKey());
-        eventRouter.RegisterEventHandler<PublicationCreatedEvent>(PublicationExchangeNames.Publication.ToExchangeName(), PublicationRoutingKeys.Created.ToRoutingKey());
-        eventRouter.RegisterEventHandler<RegisterSuccessEvent>(PublicationExchangeNames.Authorize.ToExchangeName(), PublicationRoutingKeys.Register_Success.ToRoutingKey());
-        await next.Invoke();
-    });
+//        eventRouter.RegisterEventHandler<UserCreatedEvent>(PublicationExchangeNames.Authorize.ToExchangeName(), PublicationRoutingKeys.Register_Success.ToRoutingKey());
+
+//        await next.Invoke();
+//    });
+app.UseEventRouter()
+   .Use(async (context, next) =>
+   {
+       var eventRouter = context.RequestServices.GetRequiredService<EventRouter>();
+
+       await eventRouter.RegisterEventHandlerAsync<UserCreatedEvent>(
+            PublicationExchangeNames.Authorize.ToExchangeName(),
+            PublicationRoutingKeys.Register_Success.ToRoutingKey()
+        );
+       await eventRouter.RegisterEventHandlerAsync<JobApplicationFailedEvent>(
+            PublicationExchangeNames.Job.ToExchangeName(),
+            PublicationRoutingKeys.Apply_Success.ToRoutingKey()
+        );
+       await eventRouter.RegisterEventHandlerAsync<JobApplicationFailedEvent>(
+            PublicationExchangeNames.Job.ToExchangeName(),
+            PublicationRoutingKeys.Apply_Error.ToRoutingKey()
+        );
+       await eventRouter.RegisterEventHandlerAsync<JobApplicationFailedEvent>(
+            PublicationExchangeNames.Job.ToExchangeName(),
+            PublicationRoutingKeys.Apply_Failed.ToRoutingKey()
+        );
+       await next.Invoke();
+   });
 
 if (app.Environment.IsDevelopment())
 {
@@ -75,6 +96,7 @@ if (app.Environment.IsDevelopment())
 app.UseCors("policy");
 app.UseHttpsRedirection();
 app.UseAuthentication();
+app.UseMiddleware<SharedKernel.Services.PerformedByService>();
 app.UseAuthorization();
 app.UseSwagger();
 app.UseSwaggerUI(c =>

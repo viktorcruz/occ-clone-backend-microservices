@@ -1,7 +1,6 @@
 ﻿using MediatR;
-using PublicationsService.Aplication.Dto;
-using PublicationsService.Application.Dto;
-using SharedKernel.Interface;
+using PublicationsService.Application.DTO;
+using SharedKernel.Interfaces.Response;
 
 namespace PublicationsService.Aplication.Commands
 {

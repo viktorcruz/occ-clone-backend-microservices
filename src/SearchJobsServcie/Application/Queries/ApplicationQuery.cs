@@ -1,7 +1,7 @@
 ﻿using MediatR;
-using SearchJobsService.Application.Dto;
+using SearchJobsService.Application.DTO.Queries;
 using SharedKernel.Common.Responses;
-using SharedKernel.Interface;
+using SharedKernel.Interfaces.Response;
 
 namespace SearchJobsService.Application.Queries
 {
